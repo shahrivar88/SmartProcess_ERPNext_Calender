@@ -16,7 +16,7 @@ test("version is 1.6.0 in the package, the repo root and pyproject", () => {
 	assert.match(read("__init__.py"), /__version__\s*=\s*['\"]1\.6\.0['\"]/);
 	const pyproject = read("pyproject.toml");
 	assert.match(pyproject, /^version\s*=\s*"1\.6\.0"$/m);
-	assert.match(pyproject, /SmartProcess-ERPNext-CalenderJalali/);
+	assert.match(pyproject, /SmartProcess_ERPNext_Calender/);
 	assert.doesNotMatch(pyproject, /nidyasoft/);
 });
 

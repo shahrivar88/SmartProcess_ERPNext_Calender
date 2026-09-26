@@ -13,8 +13,8 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 
 [project.urls]
-Homepage = "https://github.com/shahrivar88/SmartProcess-ERPNext-CalenderJalali"
-Repository = "https://github.com/shahrivar88/SmartProcess-ERPNext-CalenderJalali"
+Homepage = "https://github.com/shahrivar88/SmartProcess_ERPNext_Calender"
+Repository = "https://github.com/shahrivar88/SmartProcess_ERPNext_Calender"
 
 [build-system]
 requires = ["flit_core >=3.4,<4"]
