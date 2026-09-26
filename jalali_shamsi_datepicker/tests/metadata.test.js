@@ -32,12 +32,12 @@ test("requirements.txt stays comment-only so setup.py gets no fake deps", () => 
 
 test("hooks.py bumps asset query strings and keeps fixture scope narrow", () => {
 	const hooks = read("jalali_shamsi_datepicker/hooks.py");
-	for (const v of ["?v=16", "?v=2", "?v=13"]) {
+	for (const v of ["?v=16", "?v=2", "?v=14"]) {
 		assert.ok(hooks.includes(v), "missing asset bump " + v);
 	}
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/css/custom.css?v=16"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=2"'));
-	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=13"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=14"'));
 	// Fixture filters must stay pinned to this app's single Custom Field.
 	const fixtureIdx = hooks.indexOf("fixtures =");
 	assert.ok(fixtureIdx !== -1);

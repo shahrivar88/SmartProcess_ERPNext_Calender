@@ -249,6 +249,21 @@
 			install_jalali_view(picker) {
 				const view = picker.model.view;
 				this.$jalali_container = view.$container.addClass("jalali-picker");
+				// Calendar labels must not inherit numeral state from other date instances.
+				// Normalize display labels before templating, never timestamps or host input.
+				const viewModel = view.getViewModel.bind(view);
+				const persianLabel = (value) => core.normalizeDigits(String(value)).replace(
+					/[0-9]/g, digit => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]
+				);
+				view.getViewModel = (...args) => {
+					const model = viewModel(...args);
+					model.navigator.switch.text = persianLabel(model.navigator.switch.text);
+					for (const day of (model.days.list || []).flat()) day.title = persianLabel(day.title);
+					for (const item of [...(model.month.list || []), ...(model.year.list || [])]) {
+						item.title = persianLabel(item.title);
+					}
+					return model;
+				};
 				const dayModel = view._getDayViewModel.bind(view);
 				view._getDayViewModel = () => {
 					const days = dayModel();

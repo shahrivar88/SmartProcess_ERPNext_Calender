@@ -2,6 +2,31 @@ const { test, expect } = require('@playwright/test');
 const path = require('node:path');
 const root = path.resolve(__dirname, '../../..');
 
+test('calendar numerals are Persian before first paint even when formatter starts with Latin digits', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const original = persianDate.prototype.format;
+    persianDate.prototype.format = function (...args) {
+      return jalali_shamsi_datepicker.core.normalizeDigits(original.apply(this, args));
+    };
+    openControl();
+    const labels = () => control.$jalali_container.find('.table-days td span, .pwt-btn-switch, .month-item, .year-item').toArray().map(el => el.textContent);
+    const first = labels();
+    const input = control.$input.val();
+    persianDate.prototype.format = original;
+    control.$jalali_container.find('.pwt-btn-next').trigger('click');
+    const next = labels();
+    control.$jalali_container.find('.pwt-btn-switch').trigger('click');
+    control.$jalali_container.find('.pwt-btn-switch').trigger('click');
+    return { first, next, years: labels(), input, parsed: control.parse(input) };
+  });
+  for (const labels of [result.first, result.next, result.years]) {
+    expect(labels.join('')).toMatch(/[۰-۹]/);
+    expect(labels.join('')).not.toMatch(/[0-9٠-٩]/);
+  }
+  expect(result.input).toBe('1405/07/02');
+  expect(result.parsed).toBe('2026-09-24');
+});
+
 test.beforeEach(async ({ page }) => {
   await page.setContent('<html><body class="jalali-calendar-enabled"><div id="host" style="position:absolute;left:330px;top:100px"><input style="width:320px;height:30px"></div></body></html>');
   await page.addScriptTag({ path: require.resolve('jquery') });
@@ -12,6 +37,7 @@ test.beforeEach(async ({ page }) => {
       set_date_options() {}
       set_t_for_today() {}
       set_time_options() {}
+      set_disp_area() {}
     }
     window.__ = s => s;
     window.frappe = {
@@ -220,4 +246,37 @@ test('time-only popup remains editable and its width does not inherit date width
   await page.locator('.minute-input').press('Enter');
   await expect(page.locator('#host input')).toHaveValue('12:45:56');
   await expect(page.locator('.jalali-picker')).toHaveCount(0);
+});
+
+test('Gregorian helper matches selected day before and after Today', async ({ page }) => {
+  await page.evaluate(() => {
+    openControl('Date', '2026-09-24');
+    control.disp_area = $('<div class="control-value"></div>').appendTo('#host')[0];
+    let model = '2026-09-24';
+    control.get_model_value = () => model;
+    control.$input.on('change.model', () => {
+      model = control.parse(control.$input.val());
+      control.set_disp_area(model);
+    });
+    frappe.datetime.now_datetime = () => '2026-09-26 10:30:00';
+    frappe.datetime.convert_to_system_tz = value => value;
+  });
+  for (const day of [5, 12, 20]) {
+    await page.evaluate(day => {
+      control.show_jalali_picker();
+      control.$jalali_container.find('td[data-date="1405,7,' + day + '"]').trigger('click');
+    }, day);
+    await expect(page.locator('.datepicker-container')).toHaveCount(0);
+    const values = await page.evaluate(day => ({
+      helper: control.$stored_value.text(),
+      model: control.get_model_value(),
+      expected: jalali_shamsi_datepicker.core.parseJalaliInput('1405/07/' + String(day).padStart(2, '0')).gregorian,
+    }), day);
+    expect(values.helper).toBe(values.expected);
+    expect(values.model).toBe(values.expected);
+  }
+  await page.evaluate(() => { control.show_jalali_picker(); control.$jalali_container.find('.pwt-btn-today').trigger('click'); });
+  await expect(page.locator('.jalali-stored-value')).toHaveText('2026-09-26');
+  await page.evaluate(() => { control.show_jalali_picker(); control.$jalali_container.find('td[data-date="1405,7,8"]').trigger('click'); });
+  await expect(page.locator('.jalali-stored-value')).toHaveText('2026-09-30');
 });
