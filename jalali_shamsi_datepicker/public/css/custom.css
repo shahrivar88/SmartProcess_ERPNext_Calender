@@ -1,18 +1,18 @@
-/* Keep the Persian picker above form fields but under sticky page chrome. */
-body.jalali-calendar-enabled .datepicker-container {
-    z-index: 5;
+/* One geometry writer; never animate between the vendor and Frappe positions. */
+body.jalali-calendar-enabled .datepicker-container.jalali-picker {
+    position: fixed;
+    direction: rtl;
+    transition: none !important;
+    animation: none !important;
 }
-
-/* Keep the Persian picker above form fields but under sticky page chrome.
-   Inside dialogs/Quick Entry the JS raises it above the .modal element. */
-body.jalali-calendar-enabled .datepicker-container {
-	z-index: 5;
+body.jalali-calendar-enabled .jalali-picker .datepicker-plot-area {
+    transition: none !important;
+    animation: none !important;
 }
-
 /*
  * Compact Persian picker themed with Frappe tokens.
  * Day cells use the same rounded-square hover frame as selection.
- * Fridays are red text only (no disc). Empty trailing weeks are hidden in JS.
+ * Fridays are red text only (no disc). Trailing weeks are omitted before rendering.
  * .datepicker-day-view ships with min-height:200px — override so 5-week months shrink.
  * Colors follow the site theme (light/dark/custom accent) through real CSS variables:
  *   --primary-color / --primary  -> selected day, toolbox buttons, input focus
@@ -21,12 +21,14 @@ body.jalali-calendar-enabled .datepicker-container {
 body.jalali-calendar-enabled .datepicker-plot-area {
     width: 228px;
     min-width: 228px;
+    max-width: 228px;
+    box-sizing: border-box;
     min-height: 0 !important;
     height: auto !important;
     padding: 6px 6px 5px;
-    font: 12px/1.35 var(--font-stack, inherit);
+    font: 12px/1.35 var(--font-stack, sans-serif);
     color: var(--text-color, #1f272e);
-    background: color-mix(in srgb, var(--fg-color, #fff) 97.5%, #9ca3af 2.5%);
+    background: var(--fg-color, #fff);
     border: 1px solid var(--border-color, #e8e8e8);
     border-radius: 6px;
     box-shadow: var(--shadow-md, 0 6px 18px rgba(15, 23, 42, 0.1));
@@ -35,7 +37,7 @@ body.jalali-calendar-enabled .datepicker-plot-area {
 }
 
 body.jalali-calendar-enabled .datepicker-plot-area * {
-    font-family: var(--font-stack, inherit);
+    font-family: var(--font-stack, sans-serif);
     color: var(--text-color, #1f272e);
 }
 
@@ -109,15 +111,12 @@ body.jalali-calendar-enabled .datepicker-plot-area .datepicker-day-view .table-d
     min-height: 0;
 }
 
-body.jalali-calendar-enabled .datepicker-plot-area .datepicker-day-view .table-days tr.jalali-empty-week {
-    display: none !important;
-}
 
 /* Weekday initials ~10% larger / heavier than day numbers (13px / 500). */
 body.jalali-calendar-enabled .datepicker-plot-area .datepicker-day-view .month-grid-box .header .header-row-cell {
     height: 22px;
     line-height: 22px;
-    font: 550 14.3px/22px var(--font-stack, inherit);
+    font: 550 14.3px/22px var(--font-stack, sans-serif);
     color: var(--text-muted, #6b7280);
 }
 
@@ -133,7 +132,7 @@ body.jalali-calendar-enabled .datepicker-plot-area .datepicker-month-view .month
     line-height: 26px;
     font-size: 13px;
     font-weight: 500;
-    font-family: var(--font-stack, inherit);
+    font-family: var(--font-stack, sans-serif);
     background: transparent;
     border-radius: 5px;
     cursor: pointer;
@@ -175,7 +174,7 @@ body.jalali-calendar-enabled .datepicker-plot-area .datepicker-day-view .table-d
 
 /* Today: slightly larger, soft grey frame (not primary blue). */
 body.jalali-calendar-enabled .datepicker-plot-area .datepicker-day-view .table-days td.today span {
-    font: 600 14px/26px var(--font-stack, inherit);
+    font: 600 14px/26px var(--font-stack, sans-serif);
     background: color-mix(in srgb, var(--subtle-fg, #f3f3f3) 70%, #d1d5db 30%);
     color: var(--text-color, #1f272e);
     box-shadow: none;
@@ -221,6 +220,7 @@ body.jalali-calendar-enabled .datepicker-plot-area .datepicker-month-view .month
 }
 
 body.jalali-calendar-enabled .datepicker-plot-area .datepicker-time-view {
+    direction: ltr;
     display: flex;
     align-items: stretch;
     justify-content: center;
@@ -260,7 +260,7 @@ body.jalali-calendar-enabled .datepicker-plot-area .datepicker-time-view input {
     border-radius: 5px;
     background: var(--control-bg, #fff);
     text-align: center;
-    font: 600 13px/26px var(--font-stack, inherit);
+    font: 600 13px/26px var(--font-stack, sans-serif);
     color: var(--text-color, #1f272e);
     direction: ltr;
     cursor: text;
@@ -278,7 +278,7 @@ body.jalali-calendar-enabled .datepicker-plot-area .datepicker-time-view .divide
     height: auto;
     align-self: center;
     padding: 0 1px;
-    font: 600 12px var(--font-stack, inherit);
+    font: 600 12px var(--font-stack, sans-serif);
     color: var(--text-muted, #6b7280);
     line-height: 1;
 }

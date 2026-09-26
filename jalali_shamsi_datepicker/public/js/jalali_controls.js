@@ -29,6 +29,7 @@
 	const DATE_FMT = "YYYY/MM/DD";
 	const DATETIME_FMT = "YYYY/MM/DD HH:mm:ss";
 	const TIME_FMT = "HH:mm:ss";
+	let pickerSequence = 0;
 
 	// "<user date>[ <time>]" (Frappe user format) -> "<jalali date>[ <time>]"; unchanged if unparsable.
 	function userToJalaliText(text) {
@@ -68,7 +69,7 @@
 						isTime ? TIME_FMT : isDatetime ? DATETIME_FMT : DATE_FMT
 					);
 				}
-				this.$input.on("focus.jalali", () => this.show_jalali_picker());
+				this.$input.off(".jalali").on("focus.jalali click.jalali", () => this.show_jalali_picker());
 			}
 
 			set_formatted_input(value) {
@@ -167,7 +168,7 @@
 			}
 
 			show_jalali_picker() {
-				if (this.jalali_picker || !this.$input || this.$input.prop("readonly")) return;
+				if (this.jalali_picker || !this.$input || this.$input.prop("readonly") || this.$input.prop("disabled")) return;
 
 				const initial = isTime
 					? null
@@ -179,6 +180,8 @@
 					format: isTime ? TIME_FMT : isDatetime ? DATETIME_FMT : DATE_FMT,
 					initialValue: false,
 					observer: false,
+					managedInput: true,
+					responsive: false,
 					autoClose: !isDatetime && !isTime,
 					persianDigit: false,
 					position: "auto",
@@ -208,11 +211,21 @@
 					...this.build_jalali_date_options(),
 				});
 				this.jalali_picker = picker;
+				this._jalali_ns = ".jalaliPicker" + (++pickerSequence);
+				this.install_jalali_view(picker);
 				// Datetime / Time pickers stay open until an outside click; close them when
 				// the dialog or page goes away programmatically.
 				const close = () => this.destroy_jalali_picker(picker);
-				this.$input.closest(".modal").one("hide.bs.modal", close);
-				frappe.router.once("change", close);
+				this._jalali_close = close;
+				this._jalali_modal = this.$input.closest(".modal");
+				this._jalali_modal.on("hide.bs.modal" + this._jalali_ns, close);
+				frappe.router.on("change" + this._jalali_ns, close);
+				// Frappe's emitter wraps callbacks; removing by handler cannot match it.
+				this._jalali_router_events = frappe.router.jq;
+				this._jalali_detach_observer = new MutationObserver(() => {
+					if (!this.$input.get(0).isConnected) close();
+				});
+				this._jalali_detach_observer.observe(document.body, { childList: true, subtree: true });
 				this.bind_jalali_positioning(picker);
 				this.bind_jalali_outside_close(picker);
 				this.bind_jalali_keys(picker);
@@ -228,44 +241,57 @@
 					this.$input.val(this.format_for_input(this.get_model_value()));
 				}
 				picker.show();
-				// Hide until trim+center finish so the library's first auto-position does not jump.
-				const $cont = $(".datepicker-container").filter(":visible").last();
-				$cont.css({ visibility: "hidden" });
-				this.refresh_jalali_layout();
-				requestAnimationFrame(() => {
-					this.refresh_jalali_layout();
-					$cont.css({ visibility: "visible" });
-				});
-				this.enable_time_keyboard(picker);
-				// Month/year navigation re-renders the grid; keep trim in sync afterwards.
-				this.bind_jalali_month_watch($cont);
+			}
+
+			// Instance-local adapter for the bundled persian-datepicker 1.2.0.
+			// Trim the view model BEFORE templating; every render path (including wheel,
+			// month/year and setDate) now creates exactly the required rows.
+			install_jalali_view(picker) {
+				const view = picker.model.view;
+				this.$jalali_container = view.$container.addClass("jalali-picker");
+				const dayModel = view._getDayViewModel.bind(view);
+				view._getDayViewModel = () => {
+					const days = dayModel();
+					if (days.list) {
+						while (days.list.length > 5 && days.list.at(-1).every(day => day.otherMonth)) {
+							days.list.pop();
+						}
+					}
+					return days;
+				};
+				// Replace the library's positioning writer, including subsequent show calls.
+				view.setPickerBoxPosition = () => {
+					if (this.jalali_picker === picker) this.reposition_jalali_picker();
+				};
+				const afterRender = view.afterRender.bind(view);
+				view.afterRender = () => {
+					afterRender();
+					if (this.jalali_picker !== picker) return;
+					this.enable_time_keyboard(picker);
+					this.reposition_jalali_picker();
+				};
+				for (const action of ["timeUp", "timeDown"]) {
+					const spin = picker.model.navigator[action].bind(picker.model.navigator);
+					picker.model.navigator[action] = (key) => {
+						spin(key);
+						this.apply_time_from_state(picker);
+					};
+				}
+				view.render(); // Initial constructor render is still hidden.
 			}
 
 			bind_jalali_outside_close(picker) {
-				const ns = ".jalaliOutside-" + (this.df.fieldname || "f") + "-" + (this.docname || "n");
-				// Defer so the opening focus/click does not immediately close the sheet.
-				setTimeout(() => {
-					$(document)
-						.off(ns)
-						.on("mousedown" + ns, (e) => {
-							if (this.jalali_picker !== picker) return;
-							const $t = $(e.target);
-							if ($t.closest(".datepicker-container, .datepicker-plot-area").length) return;
-							if (this.$input.is(e.target) || $.contains(this.$input.get(0), e.target)) return;
-							// Close with no selection change.
-							this.$input.val(
-								this._jalali_open_value != null
-									? this._jalali_open_value
-									: this.format_for_input(this.get_model_value())
-							);
-							picker.hide();
-						});
-				}, 0);
+				const ns = this._jalali_ns;
 				this._jalali_outside_ns = ns;
+				$(document).on("mousedown" + ns, (e) => {
+					if (this.jalali_picker !== picker) return;
+					if (this.$jalali_container.get(0).contains(e.target) || this.$input.is(e.target)) return;
+					picker.hide();
+				});
 			}
 
 			bind_jalali_keys(picker) {
-				const ns = ".jalaliKeys-" + (this.df.fieldname || "f") + "-" + (this.docname || "n");
+				const ns = this._jalali_ns;
 				this._jalali_keys_ns = ns;
 				this.$input.off(ns).on("keydown" + ns, (e) => {
 					if (this.jalali_picker !== picker) return;
@@ -291,7 +317,7 @@
 			}
 
 			bind_jalali_positioning(picker) {
-				const posNs = ".jalaliPos-" + (this.df.fieldname || "f") + "-" + (this.docname || "n");
+				const posNs = this._jalali_ns;
 				const onMove = () => {
 					if (this.jalali_picker === picker) this.reposition_jalali_picker();
 				};
@@ -302,123 +328,18 @@
 					.add(document)
 					.filter(function () {
 						if (this === document) return true;
-						const ov = window.getComputedStyle(this).overflowY;
-						return ov === "auto" || ov === "scroll" || ov === "overlay";
+						const style = window.getComputedStyle(this);
+						return /(auto|scroll|overlay)/.test(style.overflowX + " " + style.overflowY);
 					});
 				$scrollers.off(posNs).on("scroll" + posNs, onMove);
 				this._jalali_pos_ns = posNs;
 				this._jalali_scrollers = $scrollers;
 			}
 
-			refresh_jalali_layout() {
-				this.trim_empty_weeks();
-				this.reposition_jalali_picker();
-			}
-
-			schedule_jalali_layout_refresh() {
-				const run = () => {
-					if (!this.jalali_picker) return;
-					this.refresh_jalali_layout();
-				};
-				// Library updates the day grid asynchronously; hit a few frames after nav.
-				run();
-				requestAnimationFrame(run);
-				[0, 30, 80, 160].forEach((ms) => setTimeout(run, ms));
-			}
-
-			// Unhide before nav so persian-datepicker can rewrite every week row
-			// (display:none rows can keep stale non-other-month cells after a 6-week month).
-			reveal_jalali_weeks($root) {
-				const $plot = ($root && $root.length ? $root : $(".datepicker-plot-area")).filter(":visible").last();
-				if (!$plot.length) return;
-				$plot.find(".table-days tr.jalali-empty-week").removeClass("jalali-empty-week");
-			}
-
-			bind_jalali_month_watch($cont) {
-				if (!$cont || !$cont.length) return;
-				const ns = ".jalaliTrim-" + (this.df.fieldname || "f") + "-" + (this.docname || "n");
-				this._jalali_trim_ns = ns;
-				// mousedown runs before the library mutates the grid.
-				$cont
-					.off(ns)
-					.on(
-						"mousedown" + ns,
-						".datepicker-navigator, .pwt-btn-next, .pwt-btn-prev, .pwt-btn-switch, .month-item, .year-item",
-						() => {
-							this.reveal_jalali_weeks($cont.find(".datepicker-plot-area"));
-						}
-					)
-					.on(
-						"click" + ns,
-						".datepicker-navigator, .pwt-btn-next, .pwt-btn-prev, .pwt-btn-switch, .month-item, .year-item",
-						() => this.schedule_jalali_layout_refresh()
-					);
-
-				const table = $cont.find(".table-days").get(0);
-				if (this._jalali_trim_obs) {
-					this._jalali_trim_obs.disconnect();
-					this._jalali_trim_obs = null;
-				}
-				if (!table || typeof MutationObserver === "undefined") return;
-				let scheduled = false;
-				this._jalali_trim_obs = new MutationObserver((mutations) => {
-					if (scheduled || this._jalali_trimming || !this.jalali_picker) return;
-					const relevant = mutations.some((m) => {
-						if (m.type === "characterData" || m.type === "childList") return true;
-						if (m.type === "attributes" && m.attributeName === "class") {
-							// Ignore our own jalali-empty-week toggles on <tr>.
-							return !(m.target && m.target.tagName === "TR");
-						}
-						return false;
-					});
-					if (!relevant) return;
-					scheduled = true;
-					requestAnimationFrame(() => {
-						scheduled = false;
-						this.refresh_jalali_layout();
-					});
-				});
-				this._jalali_trim_obs.observe(table, {
-					childList: true,
-					subtree: true,
-					characterData: true,
-					attributes: true,
-					attributeFilter: ["class"],
-				});
-			}
-
-			// Hide trailing week rows that contain only other-month days (typically row 6).
-			trim_empty_weeks() {
-				const $plot = $(".datepicker-plot-area").filter(":visible").last();
-				if (!$plot.length) return;
-				this._jalali_trimming = true;
-				try {
-					// Drop any library inline heights left over from a taller (6-week) month.
-					$plot
-						.add($plot.find(".datepicker-day-view, .datepicker-grid-view, .month-grid-box, .table-days"))
-						.each(function () {
-							this.style.removeProperty("height");
-							this.style.removeProperty("min-height");
-						});
-					$plot.find(".table-days tr.jalali-empty-week").removeClass("jalali-empty-week");
-					const $rows = $plot.find(".table-days tr");
-					for (let i = $rows.length - 1; i >= 0; i--) {
-						const $row = $rows.eq(i);
-						const $days = $row.find("td span");
-						if (!$days.length) continue;
-						const onlyOther = $days.toArray().every((el) => el.classList.contains("other-month"));
-						if (onlyOther) $row.addClass("jalali-empty-week");
-						else break;
-					}
-				} finally {
-					this._jalali_trimming = false;
-				}
-			}
-
 			reposition_jalali_picker() {
 				if (!this.$input || !this.$input.length) return;
-				const $cont = $(".datepicker-container").filter(":visible").last();
-				if (!$cont.length) return;
+				const $cont = this.$jalali_container;
+				if (!$cont || !$cont.length || $cont.hasClass("pwt-hide")) return;
 				const $plot = $cont.find(".datepicker-plot-area");
 				// Relative plot so the container gets a real width/height for centering.
 				$plot.css({ position: "relative", left: "0", top: "0" });
@@ -434,11 +355,16 @@
 					zIndex = (Number.isFinite(modalZ) ? modalZ : 1050) + 10;
 				}
 				$cont.css({ position: "fixed", margin: 0, zIndex });
-				const rect = this.$input.get(0).getBoundingClientRect();
+				const input = this.$input.get(0);
+				if (!input.isConnected || !input.getClientRects().length) {
+					this.jalali_picker.hide();
+					return;
+				}
+				const rect = input.getBoundingClientRect();
 				const height = $plot.outerHeight() || 0;
 				const width = $plot.outerWidth() || 228;
 				const pageHead = document.querySelector(".page-head");
-				const chromeBottom = pageHead ? pageHead.getBoundingClientRect().bottom : 0;
+				const chromeBottom = !$modal.length && pageHead ? pageHead.getBoundingClientRect().bottom : 0;
 				// Field scrolled under the page head — close instead of drawing over menus.
 				if (rect.bottom <= chromeBottom + 2) {
 					if (this.jalali_picker) this.jalali_picker.hide();
@@ -450,7 +376,7 @@
 				if (!fitsBelow && fitsAbove) {
 					top = rect.top - height - 4;
 				}
-				if (top < chromeBottom + 4) top = chromeBottom + 4;
+				top = Math.max(chromeBottom + 4, Math.min(top, window.innerHeight - height - 8));
 				// Center on the field (middle-to-middle).
 				let left = rect.left + (rect.width - width) / 2;
 				if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
@@ -545,7 +471,7 @@
 
 			enable_time_keyboard(picker) {
 				if (!(isDatetime || isTime) || this.jalali_picker !== picker) return;
-				const $root = $(".datepicker-container").filter(":visible").last();
+				const $root = this.$jalali_container;
 				const inputs = $root.find(".hour-input, .minute-input, .second-input");
 				if (!inputs.length) return;
 
@@ -565,11 +491,6 @@
 					$root.find(".minute-input").val(pad(Number(tm[2]) || 0));
 					$root.find(".second-input").val(pad(Number(tm[3]) || 0));
 				}
-
-				// Clicks inside time inputs must not bubble as "outside" and hide the picker.
-				$root.find(".datepicker-time-view").off(".jalaliTimeStop").on("mousedown.jalaliTimeStop click.jalaliTimeStop", (e) => {
-					e.stopPropagation();
-				});
 
 				inputs.off(".jalaliTime").on("focus.jalaliTime", function () {
 					this.select();
@@ -599,12 +520,30 @@
 					}
 					$el.val(pad(n));
 					this.apply_typed_time_part(key, n);
-					setTimeout(() => this.enable_time_keyboard(picker), 0);
+					// Keep subsequent spin/wheel operations based on the newly typed time.
+					const text = core.normalizeDigits(this.$input.val());
+					const parsed = isTime ? null : core.parseJalaliInput(text);
+					if (isTime || (parsed && parsed.valid)) {
+						const date = isTime ? new Date() : new Date(parsed.gregorian + "T00:00:00");
+						const [h, m, s] = (isTime ? text : parsed.time).split(":").map(Number);
+						date.setHours(h, m, s || 0, 0);
+						this._jalali_syncing = true;
+						try { picker.setDate(date.getTime()); }
+						finally {
+							this._jalali_syncing = false;
+							this.$input.val(text);
+						}
+					}
 				});
 			}
 
 			destroy_jalali_picker(picker) {
-				if (this.jalali_picker === picker) this.jalali_picker = null;
+				if (this.jalali_picker !== picker || picker._jalali_destroyed) return;
+				this.jalali_picker = null;
+				this._jalali_modal.off(this._jalali_ns);
+				this._jalali_router_events.off(this._jalali_ns);
+				this._jalali_detach_observer.disconnect();
+				picker.model.view.hide();
 				if (this._jalali_pos_ns) {
 					$(window).off(this._jalali_pos_ns);
 					if (this._jalali_scrollers) this._jalali_scrollers.off(this._jalali_pos_ns);
@@ -614,16 +553,8 @@
 					this.$input.off(this._jalali_keys_ns);
 					this._jalali_keys_ns = null;
 				}
-				if (this._jalali_trim_ns) {
-					$(".datepicker-container").off(this._jalali_trim_ns);
-					this._jalali_trim_ns = null;
-				}
-				if (this._jalali_trim_obs) {
-					this._jalali_trim_obs.disconnect();
-					this._jalali_trim_obs = null;
-				}
 				this._jalali_open_value = null;
-				if (picker._jalali_destroyed) return;
+				this.$jalali_container = null;
 				picker._jalali_destroyed = true;
 				setTimeout(() => picker.destroy(), 0);
 			}

@@ -1,0 +1,27 @@
+{
+  "name": "jalali-shamsi-datepicker-tests",
+  "version": "1.6.0",
+  "description": "یک اپلیکیشن کوچک برای **ERPNext/Frappe** که به شما امکان می‌دهد تاریخ‌ها را به **تقویم شمسی (Jalali/Persian)** مشاهده و وارد کنید، بدون اینکه عملکرد تاریخ‌های میلادی استاندارد سیستم مختل شود.",
+  "scripts": {
+    "test": "node --test jalali_shamsi_datepicker/tests/*.test.js && playwright test",
+    "test:unit": "node --test jalali_shamsi_datepicker/tests/*.test.js",
+    "test:browser": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shahrivar88/SmartProcess_ERPNext_Calender.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/shahrivar88/SmartProcess_ERPNext_Calender/issues"
+  },
+  "homepage": "https://github.com/shahrivar88/SmartProcess_ERPNext_Calender#readme",
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "jquery": "3.7.1"
+  },
+  "private": true
+}
