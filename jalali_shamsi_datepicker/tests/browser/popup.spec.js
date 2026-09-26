@@ -178,6 +178,39 @@ for (const direction of ['ltr', 'rtl']) {
   });
 }
 
+for (const direction of ['ltr', 'rtl']) {
+  test(`day title shows month on the right and year on the left like a wall calendar (${direction})`, async ({ page }) => {
+    const titles = await page.evaluate(dir => {
+      document.documentElement.dir = dir;
+      openControl();
+      const measure = () => {
+        const el = control.$jalali_container.find('.pwt-btn-switch')[0];
+        const text = el.firstChild;
+        const [month, year] = el.textContent.split(' ');
+        const rect = (start, end) => {
+          const range = document.createRange();
+          range.setStart(text, start);
+          range.setEnd(text, end);
+          return range.getBoundingClientRect();
+        };
+        const monthBox = rect(0, month.length);
+        const yearBox = rect(month.length + 1, el.textContent.length);
+        return { text: el.textContent, month, year, monthLeft: monthBox.left, yearRight: yearBox.right };
+      };
+      const first = measure();
+      control.$jalali_container.find('.pwt-btn-next').trigger('click');
+      return [first, measure()];
+    }, direction);
+    expect(titles[0].month).toBe('مهر');
+    expect(titles[0].year).toBe('۱۴۰۵');
+    expect(titles[1].month).toBe('آبان');
+    for (const title of titles) {
+      expect(title.year).toMatch(/^[۰-۹]{4}$/);
+      expect(title.monthLeft, title.text).toBeGreaterThan(title.yearRight);
+    }
+  });
+}
+
 test('navigation, year/month switch and wheel produce final row count synchronously', async ({ page }) => {
   await page.evaluate(() => openControl());
   const counts = await page.evaluate(() => {

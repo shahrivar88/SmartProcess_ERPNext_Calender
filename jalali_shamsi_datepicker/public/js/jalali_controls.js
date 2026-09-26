@@ -187,6 +187,8 @@
 					position: "auto",
 					onlyTimePicker: isTime,
 					calendar: { persian: { locale: "fa", leapYearMode: "astronomical" } },
+					// RTL title reads like a wall calendar: month on the right, year on the left.
+					dayPicker: { titleFormat: "MMMM YYYY" },
 					timePicker: {
 						enabled: isDatetime || isTime,
 						second: { enabled: true },
