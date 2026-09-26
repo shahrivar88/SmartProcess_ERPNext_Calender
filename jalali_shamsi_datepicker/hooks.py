@@ -28,7 +28,7 @@ app_include_css = [
 ]
 app_include_js = [
     "/assets/jalali_shamsi_datepicker/js/persian-date.min.js",
-    "/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=2",
+    "/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=3",
     "/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=2",
     "/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=14",
 ]

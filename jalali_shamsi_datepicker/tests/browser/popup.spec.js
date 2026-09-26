@@ -2,6 +2,77 @@ const { test, expect } = require('@playwright/test');
 const path = require('node:path');
 const root = path.resolve(__dirname, '../../..');
 
+test('empty field first-open day timestamps match their Jalali labels before Today', async ({ page }) => {
+  const dates = await page.evaluate(() => {
+    // Force the global constructor into Gregorian first: this is the production
+    // failure mode when something else (or an earlier picker path) left
+    // persianDate.calendarType !== 'persian'. Empty fields do not call setDate,
+    // so day cells must still come from the picker instance factory.
+    persianDate.toCalendar('gregorian');
+    openControl('Date', '');
+    const core = jalali_shamsi_datepicker.core;
+    return control.$jalali_container.find('.table-days td').toArray().map(el => {
+      const rawDate = el.dataset.date || '';
+      const rawUnix = el.dataset.unix;
+      const parts = rawDate.split(',');
+      const year = parts[0];
+      const month = parts[1];
+      const day = parts[2];
+      const parsed =
+        year && month && day ? core.parseJalaliInput(`${year}/${month}/${day}`) : null;
+      return {
+        label: rawDate,
+        unix: rawUnix,
+        otherMonth: el.classList.contains('other-month'),
+        actual: core.timestampToGregorianDateString(Number(rawUnix)),
+        expected: parsed && parsed.valid ? parsed.gregorian : null,
+        parseOk: !!(parsed && parsed.valid),
+      };
+    });
+  });
+  expect(dates.length).toBeGreaterThan(27);
+  for (const date of dates) {
+    expect(date.parseOk, `cell ${date.label} unix=${date.unix} did not parse as Jalali`).toBe(true);
+    expect(date.actual, `cell ${date.label} unix=${date.unix}`).toBe(date.expected);
+    // Guard the original production bug: Jalali year must not be treated as Gregorian CE.
+    const year = Number(String(date.label).split(',')[0]);
+    if (year >= 1200 && year <= 1599) {
+      const asGregorianYear = new Date(Number(date.unix)).getUTCFullYear();
+      expect(asGregorianYear, `cell ${date.label} unix resolved to Gregorian year ${asGregorianYear}`).toBeGreaterThan(1900);
+    }
+  }
+  // Selecting a non-today day from the empty field must write a real Gregorian model value.
+  const picked = await page.evaluate(() => {
+    const core = jalali_shamsi_datepicker.core;
+    let model = '';
+    control.get_model_value = () => model;
+    control.$input.on('change.model', () => {
+      model = control.parse(control.$input.val());
+    });
+    const todayLabel = String(control.$jalali_container.find('td.today').data('date') || '');
+    const cell = control.$jalali_container
+      .find('.table-days td:not(.other-month):not(.disabled)')
+      .toArray()
+      .map(el => ({ el, label: el.dataset.date }))
+      .find(row => row.label && row.label !== todayLabel);
+    if (!cell) throw new Error('no selectable non-today day cell');
+    const [y, m, d] = cell.label.split(',');
+    const expected = core.parseJalaliInput(`${y}/${m}/${d}`);
+    $(cell.el).trigger('click');
+    return {
+      label: cell.label,
+      input: control.$input.val(),
+      model,
+      expectedJalali: `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`,
+      expectedGregorian: expected && expected.gregorian,
+    };
+  });
+  expect(picked.expectedGregorian).toBeTruthy();
+  expect(picked.input).toBe(picked.expectedJalali);
+  expect(picked.model).toBe(picked.expectedGregorian);
+  expect(Number(picked.model.slice(0, 4))).toBeGreaterThan(1900);
+});
+
 test('calendar numerals are Persian before first paint even when formatter starts with Latin digits', async ({ page }) => {
   const result = await page.evaluate(() => {
     const original = persianDate.prototype.format;
