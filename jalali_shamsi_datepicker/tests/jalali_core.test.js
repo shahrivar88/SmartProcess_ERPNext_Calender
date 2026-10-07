@@ -59,6 +59,73 @@ test("Non-Jalali input is left to Frappe", () => {
 	}
 });
 
+test("Compact YYYYMMDD Jalali input in Latin, Persian and Arabic digits", () => {
+	const expected = { valid: true, gregorian: "2026-09-25", time: "" };
+	assert.deepEqual(core.parseJalaliInput("14050703"), expected);
+	assert.deepEqual(core.parseJalaliInput("۱۴۰۵۰۷۰۳"), expected);
+	assert.deepEqual(core.parseJalaliInput("١٤٠٥٠٧٠٣"), expected);
+	assert.deepEqual(core.parseJalaliInput("  14050703  "), expected);
+	// Same day as the separated forms.
+	for (const separated of ["1405/07/03", "1405-7-3", "۱۴۰۵/۰۷/۰۳"]) {
+		assert.deepEqual(core.parseJalaliInput(separated), expected, separated);
+	}
+});
+
+test("Compact Jalali datetime keeps the time portion untouched", () => {
+	assert.deepEqual(core.parseJalaliInput("14050703 14:30:05"), {
+		valid: true,
+		gregorian: "2026-09-25",
+		time: "14:30:05",
+	});
+	assert.deepEqual(core.parseJalaliInput("۱۴۰۵۰۷۰۳ ۱۴:۳۰"), {
+		valid: true,
+		gregorian: "2026-09-25",
+		time: "14:30",
+	});
+});
+
+test("Impossible compact Jalali dates are rejected, not rolled over", () => {
+	for (const bad of ["14050731", "14051301", "14050001", "14050700", "14041230", "۱۴۰۵۰۷۳۱"]) {
+		assert.deepEqual(core.parseJalaliInput(bad), { valid: false, input: core.normalizeDigits(bad) }, bad);
+	}
+	// Leap Esfand 30 is real.
+	assert.deepEqual(core.parseJalaliInput("14031230"), { valid: true, gregorian: "2025-03-20", time: "" });
+});
+
+test("Compact digits that are not exactly 8 or not a Jalali year are left to Frappe", () => {
+	for (const other of [
+		"140573", // 6 digits: ambiguous, never guessed
+		"1405073", // 7 digits
+		"۱۴۰۵۰۷۳",
+		"140507031", // 9 digits
+		"20260925", // Gregorian YYYYMMDD
+		"19990101",
+		"11991231", // below the Jalali year range
+		"16000101", // above the Jalali year range
+		"25092026", // Gregorian DDMMYYYY
+		"12102026", // DDMMYYYY whose first 4 digits fall inside the Jalali year range
+		"12252026", // MMDDYYYY, same
+		"1405 07 03",
+		"1405070a",
+	]) {
+		assert.equal(core.parseJalaliInput(other), null, other);
+	}
+	assert.equal(core.normalizeGregorianInput("20260925"), null, "compact Gregorian stays with Frappe");
+});
+
+test("Compact round trip is exact for every day 1990-2040", () => {
+	const day = new Date(Date.UTC(1990, 0, 1));
+	const end = Date.UTC(2040, 11, 31);
+	while (day.getTime() <= end) {
+		const iso = day.toISOString().slice(0, 10);
+		const compact = core.gregorianToJalaliString(iso).replace(/\//g, "");
+		const parsed = core.parseJalaliInput(compact);
+		assert.equal(parsed && parsed.valid, true, compact);
+		assert.equal(parsed.gregorian, iso, compact);
+		day.setUTCDate(day.getUTCDate() + 1);
+	}
+});
+
 test("Invalid Gregorian input produces no Jalali text", () => {
 	assert.equal(core.gregorianToJalaliString("2026-02-30"), "");
 	assert.equal(core.gregorianToJalaliString("not a date"), "");

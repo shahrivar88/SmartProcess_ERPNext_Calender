@@ -165,6 +165,46 @@ test("parse keeps Gregorian ISO input working (any digit system)", () => {
 	assert.equal(inst.parse(""), "");
 });
 
+test("parse converts compact Jalali input (any digit system) into the Gregorian model value", () => {
+	const { env, inst } = makeInstance("date");
+	for (const typed of ["14050703", "۱۴۰۵۰۷۰۳", "١٤٠٥٠٧٠٣"]) {
+		assert.equal(inst.parse(typed), "2026-09-25", typed);
+	}
+	assert.equal(env.frappe._msgprint_history.length, 0);
+
+	const { inst: datetime } = makeInstance("datetime");
+	assert.equal(datetime.parse("14050703 14:30:05"), "2026-09-25 14:30:05");
+	assert.equal(datetime.parse("۱۴۰۵۰۷۰۳ ۱۴:۳۰:۰۵"), "2026-09-25 14:30:05");
+});
+
+test("parse rejects impossible compact Jalali dates like separated ones", () => {
+	for (const bad of ["14050731", "14051301", "14050001"]) {
+		const { env, inst } = makeInstance("date", { model: "2026-09-24" });
+		assert.equal(inst.parse(bad), "2026-09-24", bad);
+		assert.equal(inst.last_formatted, "2026-09-24", bad);
+		assert.equal(env.frappe._msgprint_history.length, 1, bad);
+		assert.ok(env.frappe._msgprint_history[0].message.includes(bad), bad);
+	}
+});
+
+test("parse hands Gregorian-looking digits and expressions to Frappe unchanged", () => {
+	const { env, inst } = makeInstance("date");
+	for (const other of ["20260925", "25092026", "12102026", "140573", "1405073", "Today", "+1d", "-2w"]) {
+		assert.equal(inst.parse(other), other, other);
+	}
+	assert.equal(env.frappe._msgprint_history.length, 0);
+});
+
+test("no Jalali text ever reaches the model value", () => {
+	const { inst } = makeInstance("date");
+	const { inst: datetime } = makeInstance("datetime");
+	const inputs = ["14050703", "۱۴۰۵۰۷۰۳", "1405/07/03", "1405-7-3", "۱۴۰۵/۰۷/۰۳", "2026-09-25", "2026/09/25"];
+	for (const typed of inputs) {
+		assert.equal(inst.parse(typed), "2026-09-25", typed);
+		assert.equal(datetime.parse(typed + " 08:15:00"), "2026-09-25 08:15:00", typed);
+	}
+});
+
 test("build_jalali_date_options derives min/max timestamps from Gregorian df values", () => {
 	const { inst } = makeInstance("date");
 	inst.df = { min_date: "2026-09-24", max_date: "2026-10-07" };

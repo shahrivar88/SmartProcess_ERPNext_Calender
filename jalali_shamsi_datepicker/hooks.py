@@ -24,11 +24,11 @@ before_uninstall = "jalali_shamsi_datepicker.uninstall.before_uninstall"
 
 app_include_css = [
     "/assets/jalali_shamsi_datepicker/css/persian-datepicker.min.css",
-    "/assets/jalali_shamsi_datepicker/css/custom.css?v=16",
+    "/assets/jalali_shamsi_datepicker/css/custom.css?v=17",
 ]
 app_include_js = [
     "/assets/jalali_shamsi_datepicker/js/persian-date.min.js",
     "/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=3",
-    "/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=2",
-    "/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=15",
+    "/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=3",
+    "/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=16",
 ]

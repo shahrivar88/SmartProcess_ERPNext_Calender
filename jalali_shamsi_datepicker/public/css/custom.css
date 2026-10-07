@@ -327,10 +327,29 @@ html[dir="rtl"] body.jalali-calendar-enabled .frappe-control[data-fieldtype="Tim
     text-align: right;
 }
 
-/* Raw model value (exactly what is sent to the server) shown under Date/Datetime fields. */
-body.jalali-calendar-enabled .jalali-stored-value {
-    margin-top: 2px;
+/*
+ * Raw model value (exactly what is sent to the server) shown under Date/Datetime fields.
+ * Hung out of flow below .control-input-wrapper (the host), so the control keeps Frappe's
+ * own height; 1px + 14px fits inside the 16px .form-group bottom margin. top:100% (not the
+ * static position) because .help-box's 8px bottom margin collapses out of the host.
+ */
+body.jalali-calendar-enabled .jalali-stored-value-host {
+    position: relative;
+}
+
+body.jalali-calendar-enabled .jalali-stored-value-host > .jalali-stored-value {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    margin-top: 1px;
     font-size: var(--text-xs, 11px);
+    line-height: 14px;
+    white-space: nowrap;
     color: var(--text-muted, #7c7c7c);
     font-variant-numeric: tabular-nums;
+}
+
+/* RTL: the Jalali text is inset by the input's 8px padding; line the raw value up with it. */
+html[dir="rtl"] body.jalali-calendar-enabled .jalali-stored-value-host > .jalali-stored-value {
+    transform: translateX(-1.25ch);
 }

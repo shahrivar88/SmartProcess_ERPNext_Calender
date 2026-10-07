@@ -352,6 +352,48 @@ test('time-only popup remains editable and its width does not inherit date width
   await expect(page.locator('.jalali-picker')).toHaveCount(0);
 });
 
+for (const typed of ['14050703', '۱۴۰۵۰۷۰۳', '١٤٠٥٠٧٠٣']) {
+  test(`typed compact Jalali ${typed} opens the picker on 1405/07/03 and commits Gregorian 2026-09-25`, async ({ page }) => {
+    const opened = await page.evaluate(typed => {
+      openControl('Date', '2026-09-24');
+      control.jalali_picker.hide();
+      let model = '2026-09-24';
+      control.get_model_value = () => model;
+      control.$input.on('change.model', () => { model = control.parse(control.$input.val()); });
+      control.$input.val(typed);
+      control.show_jalali_picker();
+      return {
+        selected: control.$jalali_container.find('td.selected').attr('data-date'),
+        input: control.$input.val(),
+      };
+    }, typed);
+    expect(opened.selected).toBe('1405,7,3');
+    expect(opened.input, 'opening the picker must keep the typed text').toBe(typed);
+    await page.locator('#host input').press('Enter');
+    await expect(page.locator('.jalali-picker')).toHaveCount(0);
+    expect(await page.evaluate(() => control.get_model_value())).toBe('2026-09-25');
+  });
+}
+
+test('typed compact Jalali datetime opens the picker on the same day and time', async ({ page }) => {
+  const opened = await page.evaluate(() => {
+    openControl('Datetime', '2026-09-24 10:00:00');
+    control.jalali_picker.hide();
+    control.$input.val('14050703 14:30:05');
+    control.show_jalali_picker();
+    return {
+      selected: control.$jalali_container.find('td.selected').attr('data-date'),
+      time: ['hour', 'minute', 'second'].map(k => control.$jalali_container.find('.' + k + '-input').val()),
+      input: control.$input.val(),
+      parsed: control.parse(control.$input.val()),
+    };
+  });
+  expect(opened.selected).toBe('1405,7,3');
+  expect(opened.time).toEqual(['14', '30', '05']);
+  expect(opened.input).toBe('14050703 14:30:05');
+  expect(opened.parsed).toBe('2026-09-25 14:30:05');
+});
+
 test('Gregorian helper matches selected day before and after Today', async ({ page }) => {
   await page.evaluate(() => {
     openControl('Date', '2026-09-24');

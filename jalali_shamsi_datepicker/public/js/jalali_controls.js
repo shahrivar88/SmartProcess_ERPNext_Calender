@@ -15,6 +15,8 @@
 //   - frappe.form.formatters.Date / Datetime return the same user-format strings.
 //   - ControlData.set_input(value) calls set_disp_area(value) with the model value, and
 //     disp_area is the ".control-value" element (absent when only_input).
+//   - disp_area's parent is ".control-input-wrapper", the last child of a ".form-group" with
+//     a 16px bottom margin; the stored-value helper hangs into that margin (checked on 16.35).
 //   - ControlTime normally uses air-datepicker onlyTimepicker; we replace it with
 //     persian-datepicker onlyTimePicker when Jalali is enabled.
 (function () {
@@ -96,12 +98,14 @@
 
 			// Shows the raw model value (what is saved to the database) under the field.
 			// Skipped for only_input controls (grid cells, list/report filters).
+			// The host class lets custom.css hang it below .control-input-wrapper out of flow.
 			show_stored_value(value) {
 				if (this.only_input || !this.disp_area) return;
 				if (!this.$stored_value) {
+					const $host = $(this.disp_area).parent().addClass("jalali-stored-value-host");
 					this.$stored_value = $('<div class="jalali-stored-value"><bdi dir="ltr"></bdi></div>')
 						.attr("title", __("Value saved to the database"))
-						.insertAfter(this.disp_area);
+						.appendTo($host);
 				}
 				const raw = value === undefined || value === null ? "" : String(value);
 				this.$stored_value.find("bdi").text(raw);
@@ -170,9 +174,8 @@
 			show_jalali_picker() {
 				if (this.jalali_picker || !this.$input || this.$input.prop("readonly") || this.$input.prop("disabled")) return;
 
-				const initial = isTime
-					? null
-					: core.parseJalaliInput(this.$input.val());
+				const typed = this.$input.val();
+				const initial = isTime ? null : core.parseJalaliInput(typed);
 				// Snapshot the model text so an outside click can close without changing the value.
 				this._jalali_open_value = this.format_for_input(this.get_model_value());
 				// autoClose fires onHide before onSelect, so onHide uses this local reference.
@@ -240,7 +243,8 @@
 					this._jalali_syncing = true;
 					picker.setDate(new Date(gy, gm - 1, gd, h || 0, mi || 0, s || 0).getTime());
 					this._jalali_syncing = false;
-					this.$input.val(this.format_for_input(this.get_model_value()));
+					// setDate rewrote the input; keep the user's not-yet-committed text (e.g. compact 14050703).
+					this.$input.val(typed);
 				}
 				picker.show();
 			}
