@@ -211,19 +211,12 @@
 		return g.gy + "-" + pad(g.gm) + "-" + pad(g.gd);
 	}
 
-	// Compact "YYYYMMDD" (exactly 8 digits). Digits 5-8 inside 1900-2100 are a Gregorian
-	// year typed as DDMMYYYY/MMDDYYYY; a valid Jalali MMDD is at most 1231, so no real
-	// Jalali date is ever lost to that exclusion.
-	function matchCompactJalali(text) {
-		const m = /^(\d{4})(\d{2})(\d{2})(?:[\sT]+(.+))?$/.exec(text);
-		if (!m) return null;
-		const tail = Number(m[2] + m[3]);
-		return tail >= 1900 && tail <= 2100 ? null : m;
-	}
-
 	/**
 	 * Parse user input that may be a Jalali date, optionally followed by a time part.
-	 * Accepts separated "YYYY/MM/DD" (also "-" or ".") and compact "YYYYMMDD".
+	 * Accepts separated "YYYY/MM/DD" (also "-" or ".") and compact "YYYYMMDD" (exactly 8
+	 * digits). Either form is Jalali only when YYYY is in the Jalali year range; an
+	 * impossible day in that range is rejected, never handed to Frappe, because Frappe's
+	 * non-strict moment parse would store it as some other real date.
 	 *
 	 * Returns:
 	 *   null                                   input is not Jalali-shaped (let Frappe handle it)
@@ -235,7 +228,7 @@
 		const text = normalizeDigits(value);
 		const m =
 			/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})(?:[\sT]+(.+))?$/.exec(text) ||
-			matchCompactJalali(text);
+			/^(\d{4})(\d{2})(\d{2})(?:[\sT]+(.+))?$/.exec(text);
 		if (!m) return null;
 		const jy = Number(m[1]);
 		if (jy < MIN_JALALI_YEAR || jy > MAX_JALALI_YEAR) return null;

@@ -8,10 +8,12 @@ APP_CUSTOM_FIELDS = (
 )
 
 
+# Only called from `bench uninstall-app` (before_uninstall) and `bench migrate` (patch); both
+# run as Administrator via frappe.connect(), which delete_doc and CustomField.on_trash require.
 def delete_app_custom_fields(fields=APP_CUSTOM_FIELDS):
 	for dt, fieldname in fields:
 		for name in frappe.get_all("Custom Field", filters={"dt": dt, "fieldname": fieldname}, pluck="name"):
-			frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
+			frappe.delete_doc("Custom Field", name, force=True)
 
 
 def before_uninstall():

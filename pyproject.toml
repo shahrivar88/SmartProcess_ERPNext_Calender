@@ -1,6 +1,6 @@
 [project]
 name = "jalali_shamsi_datepicker"
-version = "1.6.1"
+version = "1.6.2"
 description = "A best solution to change date and datetime fields to Shamsi(Jalali) Calendar."
 authors = [
     { name = "Ideenemium", email = "ideenemium@gmail.com" }

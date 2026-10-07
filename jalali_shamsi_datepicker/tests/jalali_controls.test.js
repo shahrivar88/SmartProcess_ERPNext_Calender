@@ -178,7 +178,7 @@ test("parse converts compact Jalali input (any digit system) into the Gregorian 
 });
 
 test("parse rejects impossible compact Jalali dates like separated ones", () => {
-	for (const bad of ["14050731", "14051301", "14050001"]) {
+	for (const bad of ["14050731", "14051301", "14050001", "14052001", "12102026"]) {
 		const { env, inst } = makeInstance("date", { model: "2026-09-24" });
 		assert.equal(inst.parse(bad), "2026-09-24", bad);
 		assert.equal(inst.last_formatted, "2026-09-24", bad);
@@ -189,7 +189,7 @@ test("parse rejects impossible compact Jalali dates like separated ones", () => 
 
 test("parse hands Gregorian-looking digits and expressions to Frappe unchanged", () => {
 	const { env, inst } = makeInstance("date");
-	for (const other of ["20260925", "25092026", "12102026", "140573", "1405073", "Today", "+1d", "-2w"]) {
+	for (const other of ["20260925", "25092026", "12-10-2026", "140573", "1405073", "Today", "+1d", "-2w"]) {
 		assert.equal(inst.parse(other), other, other);
 	}
 	assert.equal(env.frappe._msgprint_history.length, 0);

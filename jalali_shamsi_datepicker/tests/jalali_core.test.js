@@ -102,15 +102,21 @@ test("Compact digits that are not exactly 8 or not a Jalali year are left to Fra
 		"19990101",
 		"11991231", // below the Jalali year range
 		"16000101", // above the Jalali year range
-		"25092026", // Gregorian DDMMYYYY
-		"12102026", // DDMMYYYY whose first 4 digits fall inside the Jalali year range
-		"12252026", // MMDDYYYY, same
+		"25092026", // Gregorian DDMMYYYY outside the Jalali year range
 		"1405 07 03",
 		"1405070a",
 	]) {
 		assert.equal(core.parseJalaliInput(other), null, other);
 	}
 	assert.equal(core.normalizeGregorianInput("20260925"), null, "compact Gregorian stays with Frappe");
+});
+
+test("8 digits starting with a Jalali year are always Jalali; impossible ones are rejected", () => {
+	// No tail-year guessing: with a dd-mm-yyyy site format, Frappe's non-strict moment parse
+	// would silently store "14052001" (a mistyped Jalali month) as 2001-05-14.
+	for (const bad of ["14052001", "14051901", "14052101", "12102026", "15062026", "12252026"]) {
+		assert.deepEqual(core.parseJalaliInput(bad), { valid: false, input: bad }, bad);
+	}
 });
 
 test("Compact round trip is exact for every day 1990-2040", () => {
