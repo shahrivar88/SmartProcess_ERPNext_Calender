@@ -162,7 +162,69 @@ test("parse keeps Gregorian ISO input working (any digit system)", () => {
 	assert.equal(inst.parse("۲۰۲۶/۰۹/۲۴"), "2026-09-24");
 	// Non-date expressions still go to Frappe's own parse unchanged.
 	assert.equal(inst.parse("Today"), "Today");
+	assert.equal(inst.parse("+1d"), "+1d");
+	assert.equal(inst.parse("-2w"), "-2w");
 	assert.equal(inst.parse(""), "");
+});
+
+test("parse rejects recognized invalid Gregorian days and clocks without handing them to Frappe", () => {
+	const { env, inst } = makeInstance("datetime", { model: "2026-09-24 10:30:00" });
+	for (const bad of [
+		"2026-09-25 99:99:99",
+		"2026-09-25 25:00:00",
+		"2026-09-25 12:70:00",
+		"2026-09-25 12:30:99",
+		"2026-02-30",
+		"2026-13-01",
+		"2026-00-01",
+	]) {
+		env.frappe._msgprint_history.length = 0;
+		const result = inst.parse(bad);
+		assert.equal(result, "2026-09-24 10:30:00", bad);
+		assert.notEqual(result, "2026-09-25 23:59:59", bad);
+		assert.equal(env.frappe._msgprint_history.length, 1, bad);
+		assert.ok(env.frappe._msgprint_history[0].message.includes(bad.replace(/\s+/g, " ")), bad);
+	}
+	assert.equal(inst.parse("2026-09-25 00:00:00"), "2026-09-25 00:00:00");
+	assert.equal(inst.parse("2026-09-25 23:59:59"), "2026-09-25 23:59:59");
+	assert.equal(inst.parse("۲۰۲۶-۰۹-۲۵ ۲۳:۵۹:۵۹"), "2026-09-25 23:59:59");
+});
+
+test("parse rejects Jalali datetime with an invalid numeric clock", () => {
+	const { env, inst } = makeInstance("datetime", { model: "2026-09-24 10:30:00" });
+	for (const bad of ["1405/07/03 25:00:00", "14050703 99:99:99", "۱۴۰۵/۰۷/۰۳ 12:70:00"]) {
+		env.frappe._msgprint_history.length = 0;
+		assert.equal(inst.parse(bad), "2026-09-24 10:30:00", bad);
+		assert.equal(env.frappe._msgprint_history.length, 1, bad);
+	}
+	assert.equal(inst.parse("1405/07/03 00:00:00"), "2026-09-25 00:00:00");
+	assert.equal(inst.parse("1405/07/03 23:59:59"), "2026-09-25 23:59:59");
+});
+
+test("parse on a Dialog without a backing doc restores the previous valid value", () => {
+	const { env, inst } = makeInstance("date", { model: "" });
+	assert.equal(inst.get_model_value(), "", "reproduces the Dialog-without-doc case");
+	inst.set_formatted_input("2026-09-25");
+	assert.equal(inst._jalali_last_valid, "2026-09-25");
+
+	const result = inst.parse("1404/12/30");
+	assert.equal(result, "2026-09-25", "must not clear the Dialog field");
+	assert.equal(inst.last_formatted, "2026-09-25");
+	assert.equal(env.frappe._msgprint_history.length, 1);
+});
+
+test("parse on a form still prefers the live model value over instance memory", () => {
+	const { inst } = makeInstance("date", { model: "2026-09-24" });
+	inst.set_formatted_input("2026-01-01");
+	assert.equal(inst.parse("1404/12/30"), "2026-09-24");
+});
+
+test("parse treats an empty field as an intentional clear", () => {
+	const { env, inst } = makeInstance("date", { model: "" });
+	inst.set_formatted_input("2026-09-25");
+	assert.equal(inst.parse(""), "");
+	assert.equal(inst._jalali_last_valid, "");
+	assert.equal(env.frappe._msgprint_history.length, 0);
 });
 
 test("parse converts compact Jalali input (any digit system) into the Gregorian model value", () => {

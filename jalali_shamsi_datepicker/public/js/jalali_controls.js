@@ -77,6 +77,7 @@
 			set_formatted_input(value) {
 				if (!isDatetime && !isTime) {
 					super.set_formatted_input(value);
+					this.remember_valid_value(value);
 					return;
 				}
 				// ControlDatetime/Time.set_formatted_input only write the input when air-datepicker exists.
@@ -84,6 +85,7 @@
 					value = isTime ? frappe.datetime.now_time() : frappe.datetime.now_datetime();
 				}
 				this.$input && this.$input.val(this.format_for_input(value));
+				this.remember_valid_value(value);
 			}
 
 			format_for_input(value) {
@@ -93,7 +95,34 @@
 
 			set_disp_area(value) {
 				super.set_disp_area(value);
+				this.remember_valid_value(value);
 				if (!isTime) this.show_stored_value(value);
+			}
+
+			// Instance-local last committed model value. Dialogs without a backing doc
+			// have an empty get_model_value(); remember the last value Frappe wrote here.
+			remember_valid_value(value) {
+				if (value == null || value === "") return;
+				const text = String(value);
+				if (["today", "now"].includes(text.toLowerCase())) return;
+				this._jalali_last_valid = text;
+			}
+
+			previous_valid_value() {
+				const model = this.get_model_value && this.get_model_value();
+				if (model) return model;
+				return this._jalali_last_valid || "";
+			}
+
+			reject_invalid_input(input) {
+				const current = this.previous_valid_value();
+				frappe.msgprint({
+					title: __("Invalid Date"),
+					indicator: "red",
+					message: __("{0} is not a valid Jalali date.", [core.escapeHtml(input)]),
+				});
+				setTimeout(() => this.set_formatted_input(current), 0);
+				return current;
 			}
 
 			// Shows the raw model value (what is saved to the database) under the field.
@@ -114,32 +143,25 @@
 
 			parse(value) {
 				if (isTime) return super.parse(value);
+				if (value == null || String(value).trim() === "") {
+					this._jalali_last_valid = "";
+					return super.parse(value);
+				}
 				const parsed = core.parseJalaliInput(value);
 				if (!parsed) {
-					// Not Jalali-shaped: keep Gregorian input (with any digit system) working
-					// exactly like Frappe's own parse, and leave everything else untouched.
-					const iso = core.normalizeGregorianInput(value);
-					if (iso) {
-						const [datePart, timePart] = iso.split(" ");
+					// Not Jalali-shaped: keep Gregorian ISO-ish input (any digit system)
+					// working, but never hand a recognized-invalid clock to Frappe.
+					const greg = core.normalizeGregorianInput(value);
+					if (greg) {
+						if (!greg.valid) return this.reject_invalid_input(greg.input);
 						const userText =
-							frappe.datetime.str_to_user(datePart, false, true) +
-							(!isDatetime || !timePart ? "" : " " + timePart);
+							frappe.datetime.str_to_user(greg.gregorian, false, true) +
+							(!isDatetime || !greg.time ? "" : " " + greg.time);
 						return super.parse(userText);
 					}
 					return super.parse(value);
 				}
-				if (!parsed.valid) {
-					const current = this.get_model_value();
-					frappe.msgprint({
-						title: __("Invalid Date"),
-						indicator: "red",
-						// parsed.input is user text and can contain markup (e.g. in the time part);
-						// msgprint appends message as HTML, so escape it before interpolating.
-						message: __("{0} is not a valid Jalali date.", [core.escapeHtml(parsed.input)]),
-					});
-					setTimeout(() => this.set_formatted_input(current), 0);
-					return current;
-				}
+				if (!parsed.valid) return this.reject_invalid_input(parsed.input);
 				let userText = frappe.datetime.str_to_user(parsed.gregorian, false, true);
 				if (isDatetime && parsed.time) {
 					userText += " " + parsed.time;

@@ -38,8 +38,8 @@ test("hooks.py bumps asset query strings and keeps fixture scope narrow", () => 
 	const hooks = read("jalali_shamsi_datepicker/hooks.py");
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/css/custom.css?v=17"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=3"'));
-	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=4"'));
-	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=16"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=5"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=17"'));
 	// Vendor assets are untouched since 1.6.0, so their URLs must not change.
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/css/persian-datepicker.min.css"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/persian-date.min.js"'));

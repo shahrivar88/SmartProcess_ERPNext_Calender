@@ -47,6 +47,34 @@ test("Datetime input keeps the time portion untouched", () => {
 	});
 });
 
+test("Jalali datetime rejects an invalid numeric clock and does not coerce it", () => {
+	for (const bad of [
+		"1405/07/03 25:00:00",
+		"14050703 99:99:99",
+		"۱۴۰۵/۰۷/۰۳ 12:70:00",
+		"1405/07/03 12:30:99",
+		"1405/07/03 24:00:00",
+	]) {
+		const parsed = core.parseJalaliInput(bad);
+		assert.equal(parsed && parsed.valid, false, bad);
+		assert.ok(parsed.input, bad);
+	}
+	for (const ok of [
+		["1405/07/03 00:00:00", "2026-09-25", "00:00:00"],
+		["1405/07/03 23:59:59", "2026-09-25", "23:59:59"],
+		["1405/07/03 00:00", "2026-09-25", "00:00"],
+		["1405/07/03 23:59", "2026-09-25", "23:59"],
+		["۱۴۰۵/۰۷/۰۳ ۰۰:۰۰:۰۰", "2026-09-25", "00:00:00"],
+		["١٤٠٥/٠٧/٠٣ ٢٣:٥٩:٥٩", "2026-09-25", "23:59:59"],
+	]) {
+		assert.deepEqual(
+			core.parseJalaliInput(ok[0]),
+			{ valid: true, gregorian: ok[1], time: ok[2] },
+			ok[0]
+		);
+	}
+});
+
 test("Impossible Jalali dates are rejected, not rolled over", () => {
 	for (const bad of ["1405/13/01", "1405/00/10", "1405/07/31", "1405/01/32", "1405/07/00"]) {
 		assert.equal(core.parseJalaliInput(bad).valid, false, bad);
@@ -177,15 +205,63 @@ test("disabledDatesSet keeps only strict YYYY-MM-DD entries", () => {
 });
 
 test("normalizeGregorianInput normalizes ISO-ish Gregorian with any digit system", () => {
-	assert.equal(core.normalizeGregorianInput("2026/09/24"), "2026-09-24");
-	assert.equal(core.normalizeGregorianInput("۲۰۲۶/۰۹/۲۴"), "2026-09-24");
-	assert.equal(core.normalizeGregorianInput("2026-9-4"), "2026-09-04");
-	assert.equal(core.normalizeGregorianInput("2026.9.4"), "2026-09-04");
-	assert.equal(core.normalizeGregorianInput("2026-09-24 14:30:05"), "2026-09-24 14:30:05");
+	const dateOnly = (iso) => ({ valid: true, gregorian: iso, time: "" });
+	assert.deepEqual(core.normalizeGregorianInput("2026/09/24"), dateOnly("2026-09-24"));
+	assert.deepEqual(core.normalizeGregorianInput("۲۰۲۶/۰۹/۲۴"), dateOnly("2026-09-24"));
+	assert.deepEqual(core.normalizeGregorianInput("2026-9-4"), dateOnly("2026-09-04"));
+	assert.deepEqual(core.normalizeGregorianInput("2026.9.4"), dateOnly("2026-09-04"));
+	assert.deepEqual(core.normalizeGregorianInput("2026-09-24 14:30:05"), {
+		valid: true,
+		gregorian: "2026-09-24",
+		time: "14:30:05",
+	});
+	assert.deepEqual(core.normalizeGregorianInput("2026-09-25 00:00"), {
+		valid: true,
+		gregorian: "2026-09-25",
+		time: "00:00",
+	});
+	assert.deepEqual(core.normalizeGregorianInput("2026-09-25 23:59"), {
+		valid: true,
+		gregorian: "2026-09-25",
+		time: "23:59",
+	});
+	assert.deepEqual(core.normalizeGregorianInput("2026-09-25 23:59:59"), {
+		valid: true,
+		gregorian: "2026-09-25",
+		time: "23:59:59",
+	});
+	assert.deepEqual(core.normalizeGregorianInput("۲۰۲۶-۰۹-۲۵ ۲۳:۵۹:۵۹"), {
+		valid: true,
+		gregorian: "2026-09-25",
+		time: "23:59:59",
+	});
+	assert.deepEqual(core.normalizeGregorianInput("٢٠٢٦-٠٩-٢٥ 00:00:00"), {
+		valid: true,
+		gregorian: "2026-09-25",
+		time: "00:00:00",
+	});
 	// Jalali years stay owned by parseJalaliInput, not normalised as Gregorian.
 	assert.equal(core.normalizeGregorianInput("١٤٠٥/٠٧/٠٢"), null);
-	for (const bad of ["2026-02-30", "2026-13-01", "1899-12-31", "2101-01-01", "not a date", "", null, undefined]) {
-		assert.equal(core.normalizeGregorianInput(bad), null, String(bad));
+	for (const other of ["1899-12-31", "2101-01-01", "not a date", "", null, undefined, "Today", "+1d"]) {
+		assert.equal(core.normalizeGregorianInput(other), null, String(other));
+	}
+});
+
+test("normalizeGregorianInput rejects recognized invalid days and clocks without clamping", () => {
+	for (const bad of [
+		"2026-09-25 99:99:99",
+		"2026-09-25 25:00:00",
+		"2026-09-25 12:70:00",
+		"2026-09-25 12:30:99",
+		"2026-02-30",
+		"2026-13-01",
+		"2026-00-01",
+		"2026/09/25 24:00:00",
+	]) {
+		const got = core.normalizeGregorianInput(bad);
+		assert.equal(got && got.valid, false, bad);
+		assert.ok(got.input, bad);
+		assert.notEqual(got.gregorian, "2026-09-25", bad);
 	}
 });
 
