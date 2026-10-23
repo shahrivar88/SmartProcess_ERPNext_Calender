@@ -39,7 +39,13 @@ test("hooks.py bumps asset query strings and keeps fixture scope narrow", () => 
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/css/custom.css?v=17"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=3"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=5"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_persian_date_adapter.js?v=1"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=17"'));
+	const coreIdx = hooks.indexOf("jalali_core.js");
+	const adapterIdx = hooks.indexOf("jalali_persian_date_adapter.js");
+	const controlsIdx = hooks.indexOf("jalali_controls.js");
+	assert.ok(coreIdx !== -1 && adapterIdx !== -1 && controlsIdx !== -1);
+	assert.ok(coreIdx < adapterIdx && adapterIdx < controlsIdx, "adapter must load after core and before controls");
 	// Vendor assets are untouched since 1.6.0, so their URLs must not change.
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/css/persian-datepicker.min.css"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/persian-date.min.js"'));
