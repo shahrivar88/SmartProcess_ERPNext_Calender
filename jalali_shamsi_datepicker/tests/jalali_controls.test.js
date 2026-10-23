@@ -118,6 +118,10 @@ test("enabled setting patches once and formats Jalali without changing the value
 	assert.ok(new patchedDate() instanceof originals.ControlDate);
 	assert.equal(frappe.form.formatters.Date("2026-09-24"), "1405/07/02");
 	assert.equal(frappe.form.formatters.Datetime("2026-09-24 14:30:05"), "1405/07/02 14:30:05");
+	assert.equal(frappe.form.formatters.Date("1821-03-21"), "1200/01/01");
+	assert.equal(frappe.form.formatters.Date("1821-03-20"), "1821-03-20");
+	assert.equal(frappe.form.formatters.Date("2221-03-20"), "1599/12/29");
+	assert.equal(frappe.form.formatters.Date("2221-03-21"), "2221-03-21");
 
 	vm.runInContext(controlsSrc, ctx);
 	assert.equal(frappe.ui.form.ControlDate, patchedDate, "second load must not wrap again");
@@ -277,11 +281,20 @@ test("build_jalali_date_options derives min/max timestamps from Gregorian df val
 
 	inst.df = { min_date: "2026-02-30" }; // not a real day -> ignored, no roll-over
 	const opts2 = inst.build_jalali_date_options();
-	assert.equal(opts2.minDate, undefined);
+	assert.equal(opts2.minDate, new Date(1821, 2, 21).getTime());
 
 	inst.df = {};
 	const empty = inst.build_jalali_date_options();
-	assert.equal(Object.keys(empty).length, 0, "empty df must produce no options");
+	assert.equal(empty.minDate, new Date(1821, 2, 21).getTime());
+	assert.equal(empty.maxDate, new Date(2221, 2, 20).getTime());
+});
+
+test("build_jalali_date_options clamps df min/max to the supported calendar range", () => {
+	const { inst } = makeInstance("date");
+	inst.df = { min_date: "1800-01-01", max_date: "2300-01-01" };
+	const opts = inst.build_jalali_date_options();
+	assert.equal(opts.minDate, new Date(1821, 2, 21).getTime());
+	assert.equal(opts.maxDate, new Date(2221, 2, 20).getTime());
 });
 
 test("build_jalali_date_options turns disabled_dates into a local-day checkDate", () => {

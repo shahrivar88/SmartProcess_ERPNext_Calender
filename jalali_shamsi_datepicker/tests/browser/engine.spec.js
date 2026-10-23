@@ -76,8 +76,46 @@ test.beforeEach(async ({ page }) => {
 	});
 });
 
+test("global vendor stays unpatched while this app's picker uses the isolated engine", async ({ page }) => {
+	const isolation = await page.evaluate(() => {
+		const raw = new persianDate(new Date(1831, 2, 21, 12, 0, 0)).toArray();
+		openControl("Date", "1831-03-21");
+		return {
+			globalFlag: !!persianDate.__jalaliCoreAdapter,
+			raw: raw[0] + "/" + raw[1] + "/" + raw[2],
+			pickerIsolated: !!(control.jalali_picker && control.jalali_picker.model.PersianDate.__jalaliIsolated),
+			selected: control.$jalali_container.find("td.selected").attr("data-date"),
+		};
+	});
+	expect(isolation.globalFlag).toBe(false);
+	expect(isolation.raw).toBe("1209/12/30");
+	expect(isolation.pickerIsolated).toBe(true);
+	expect(isolation.selected).toBe("1210,1,1");
+});
+
+test("a foreign persianDatepicker consumer still sees the unmodified vendor", async ({ page }) => {
+	const foreign = await page.evaluate(() => {
+		const $input = $('<input id="foreign">').appendTo("body");
+		const picker = $input.persianDatepicker({
+			initialValue: false,
+			persianDigit: false,
+			calendar: { persian: { locale: "fa", leapYearMode: "astronomical" } },
+		});
+		picker.setDate(new Date(1831, 2, 21, 12, 0, 0).getTime());
+		const selected = picker.model.view.$container.find("td.selected").attr("data-date");
+		picker.destroy();
+		$input.remove();
+		return {
+			selected,
+			globalFlag: !!persianDate.__jalaliCoreAdapter,
+		};
+	});
+	expect(foreign.globalFlag).toBe(false);
+	expect(foreign.selected).toBe("1209,12,30");
+});
+
 test("adapter is installed and empty-field cells still match core timestamps", async ({ page }) => {
-	expect(await page.evaluate(() => !!persianDate.__jalaliCoreAdapter)).toBe(true);
+	expect(await page.evaluate(() => !!persianDate.__jalaliCoreAdapter)).toBe(false);
 	const days = await page.evaluate(() => {
 		openControl("Date", "");
 		const core = jalali_shamsi_datepicker.core;
@@ -175,9 +213,9 @@ test("min/max and disabled_dates follow the core Gregorian day on a leap pair", 
 			disabled_dates: ["1831-03-22"],
 		});
 	});
-	expect(await page.locator('td[data-date="1210,1,1"]').getAttribute("class")).not.toContain("disabled");
-	expect(await page.locator('td[data-date="1210,1,2"]').getAttribute("class")).toContain("disabled");
-	await page.locator('td[data-date="1210,1,3"]').click();
+	expect(await page.locator('.jalali-picker td[data-date="1210,1,1"]').last().getAttribute("class")).not.toContain("disabled");
+	expect(await page.locator('.jalali-picker td[data-date="1210,1,2"]').last().getAttribute("class")).toContain("disabled");
+	await page.locator('.jalali-picker td[data-date="1210,1,3"]').last().click();
 	expect(await page.locator("input").first().inputValue()).toBe("1210/01/03");
 	expect(await page.evaluate(() => control.get_model_value())).toBe("1831-03-23");
 });

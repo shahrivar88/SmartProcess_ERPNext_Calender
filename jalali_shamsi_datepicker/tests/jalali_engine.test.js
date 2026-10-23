@@ -13,8 +13,11 @@ const PersianDate = require(path.join(jsDir, "persian-date.min.js"));
 const adapter = require(path.join(jsDir, "jalali_persian_date_adapter.js"));
 
 assert.equal(PersianDate.__jalaliCoreAdapter, undefined);
-assert.deepEqual(adapter.install(PersianDate, core), { installed: true });
-assert.equal(PersianDate.__jalaliCoreAdapter, true);
+const created = adapter.createIsolatedConstructor(PersianDate, core);
+assert.equal(created.ok, true);
+const Isolated = created.constructor;
+assert.equal(PersianDate.__jalaliCoreAdapter, undefined);
+assert.equal(Isolated.__jalaliCoreAdapter, true);
 
 function pad(n) {
 	return String(n).padStart(2, "0");
@@ -25,7 +28,7 @@ function jalaliText(parts) {
 }
 
 function patchedFromGregorian(gy, gm, gd, hour, minute, second) {
-	return new PersianDate(new Date(gy, gm - 1, gd, hour, minute, second, 0));
+	return new Isolated(new Date(gy, gm - 1, gd, hour, minute, second, 0));
 }
 
 const ANCHORS = {
@@ -50,10 +53,15 @@ const DIVERGENT_VENDOR_DAYS = [
 	"1473/12/30",
 ];
 
-test("adapter is idempotent and does not invent a third algorithm", () => {
-	assert.deepEqual(adapter.install(PersianDate, core), { installed: true, skipped: true });
+test("adapter is isolated: global vendor stays raw while the subclass matches core", () => {
+	const raw = new PersianDate(new Date(1831, 2, 21, 12, 0, 0)).toArray();
+	assert.equal(jalaliText(raw), "1209/12/30");
+	assert.equal(new PersianDate([1209, 1, 1]).isLeapYear(), true);
+	const again = adapter.createIsolatedConstructor(PersianDate, core);
+	assert.equal(again.ok, true);
+	assert.notEqual(again.constructor, Isolated);
+	assert.equal(PersianDate.__jalaliCoreAdapter, undefined);
 	assert.equal(typeof core.gregorianToJalaliString, "function");
-	assert.equal(typeof core.parseJalaliInput, "function");
 });
 
 test("focused leap-pair days that the raw vendor labels wrong now match the core", () => {
@@ -66,14 +74,14 @@ test("focused leap-pair days that the raw vendor labels wrong now match the core
 		assert.equal(parsed.valid, true, jalali);
 		assert.equal(parsed.gregorian, iso, jalali);
 	}
-	assert.equal(new PersianDate([1209, 12, 1]).daysInMonth(), 29);
-	assert.equal(new PersianDate([1210, 12, 1]).daysInMonth(), 30);
-	assert.equal(new PersianDate([1403, 12, 1]).daysInMonth(), 30);
-	assert.equal(new PersianDate([1404, 12, 1]).daysInMonth(), 29);
+	assert.equal(new Isolated([1209, 12, 1]).daysInMonth(), 29);
+	assert.equal(new Isolated([1210, 12, 1]).daysInMonth(), 30);
+	assert.equal(new Isolated([1403, 12, 1]).daysInMonth(), 30);
+	assert.equal(new Isolated([1404, 12, 1]).daysInMonth(), 29);
 	for (const invalid of DIVERGENT_VENDOR_DAYS) {
 		assert.equal(core.parseJalaliInput(invalid).valid, false, invalid);
 		const [jy, jm, jd] = invalid.split("/").map(Number);
-		assert.equal(new PersianDate([jy, jm, 1]).daysInMonth() < jd, true, invalid);
+		assert.equal(new Isolated([jy, jm, 1]).daysInMonth() < jd, true, invalid);
 	}
 });
 
@@ -83,19 +91,19 @@ test("Date and Datetime keep the clock on a former divergent day", () => {
 	assert.equal(pd.hour(), 14);
 	assert.equal(pd.minute(), 30);
 	assert.equal(pd.second(), 5);
-	const back = new PersianDate([1210, 1, 1, 14, 30, 5]).toCalendar("gregorian").toArray();
+	const back = new Isolated([1210, 1, 1, 14, 30, 5]).toCalendar("gregorian").toArray();
 	assert.deepEqual(back.slice(0, 6), [1831, 3, 21, 14, 30, 5]);
 });
 
 test("leap years 1200-1599 match the core, including both endpoints", () => {
 	for (let y = 1200; y <= 1599; y++) {
 		assert.equal(
-			new PersianDate([y, 1, 1]).isLeapYear(),
+			new Isolated([y, 1, 1]).isLeapYear(),
 			core.isLeapJalaliYear(y),
 			String(y)
 		);
 		assert.equal(
-			new PersianDate([y, 12, 1]).daysInMonth(),
+			new Isolated([y, 12, 1]).daysInMonth(),
 			core.jalaliMonthLength(y, 12),
 			String(y)
 		);
@@ -121,7 +129,7 @@ test("every supported civil day round-trips through the patched picker engine", 
 		assert.equal(selected.valid, true, displayed);
 		assert.equal(selected.gregorian, iso, displayed);
 		const [jy, jm, jd] = coreText.split("/").map(Number);
-		const stored = new PersianDate([jy, jm, jd, 12, 0, 0, 0]).toCalendar("gregorian").toArray();
+		const stored = new Isolated([jy, jm, jd, 12, 0, 0, 0]).toCalendar("gregorian").toArray();
 		assert.equal(stored[0] + "-" + pad(stored[1]) + "-" + pad(stored[2]), iso, coreText);
 		assert.ok(coreText > previous, iso);
 		previous = coreText;
@@ -135,7 +143,7 @@ test("civil mapping and clocks stay exact in UTC, Asia/Tehran and America/New_Yo
 	const script = `
 		const core = require(${JSON.stringify(path.join(jsDir, "jalali_core.js"))});
 		const PD = require(${JSON.stringify(path.join(jsDir, "persian-date.min.js"))});
-		require(${JSON.stringify(path.join(jsDir, "jalali_persian_date_adapter.js"))}).install(PD, core);
+		const Isolated = require(${JSON.stringify(path.join(jsDir, "jalali_persian_date_adapter.js"))}).createIsolatedConstructor(PD, core).constructor;
 		const pad = (n) => String(n).padStart(2, "0");
 		const samples = ${JSON.stringify([
 			...Object.keys(ANCHORS),
@@ -153,7 +161,7 @@ test("civil mapping and clocks stay exact in UTC, Asia/Tehran and America/New_Yo
 					console.error("skipped-nonexistent", iso, hour, process.env.TZ);
 					continue;
 				}
-				const pd = new PD(local);
+				const pd = new Isolated(local);
 				const got = pd.toArray();
 				const text = got[0] + "/" + pad(got[1]) + "/" + pad(got[2]);
 				if (text !== coreText) {

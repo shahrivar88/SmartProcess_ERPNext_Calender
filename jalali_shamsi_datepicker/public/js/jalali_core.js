@@ -291,7 +291,26 @@
 		};
 	}
 
+	function isSupportedJalaliYear(jy) {
+		return Number.isInteger(jy) && jy >= MIN_JALALI_YEAR && jy <= MAX_JALALI_YEAR;
+	}
+
+	function supportedGregorianBounds() {
+		return {
+			start: jalaliToGregorianString(MIN_JALALI_YEAR, 1, 1),
+			end: jalaliToGregorianString(
+				MAX_JALALI_YEAR,
+				12,
+				jalaliMonthLength(MAX_JALALI_YEAR, 12)
+			),
+		};
+	}
+
 	return {
+		MIN_JALALI_YEAR,
+		MAX_JALALI_YEAR,
+		isSupportedJalaliYear,
+		supportedGregorianBounds,
 		normalizeDigits,
 		escapeHtml,
 		gregorianDateStringToTimestamp,

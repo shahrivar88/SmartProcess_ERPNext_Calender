@@ -14,6 +14,19 @@ test("Jalali -> exact Gregorian value", () => {
 	assert.equal(core.jalaliToGregorianString(1405, 7, 15), "2026-10-07");
 });
 
+test("supported Jalali years are 1200-1599 and map to the documented Gregorian bounds", () => {
+	assert.equal(core.MIN_JALALI_YEAR, 1200);
+	assert.equal(core.MAX_JALALI_YEAR, 1599);
+	assert.equal(core.isSupportedJalaliYear(1199), false);
+	assert.equal(core.isSupportedJalaliYear(1200), true);
+	assert.equal(core.isSupportedJalaliYear(1599), true);
+	assert.equal(core.isSupportedJalaliYear(1600), false);
+	assert.deepEqual(core.supportedGregorianBounds(), {
+		start: "1821-03-21",
+		end: "2221-03-20",
+	});
+});
+
 test("Nowruz year boundary", () => {
 	assert.equal(core.gregorianToJalaliString("2026-03-20"), "1404/12/29");
 	assert.equal(core.gregorianToJalaliString("2026-03-21"), "1405/01/01");
