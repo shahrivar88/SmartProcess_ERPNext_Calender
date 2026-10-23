@@ -257,3 +257,84 @@ test("RTL popup still centers on a leap-pair Date field", async ({ page }) => {
 	});
 	expect(Math.abs(box.left - box.expected)).toBeLessThanOrEqual(0.5);
 });
+
+test("persian-datepicker constructs with the vendor before attachToPicker, then re-renders isolated", async ({ page }) => {
+	const result = await page.evaluate(() => {
+		const adapter = jalali_shamsi_datepicker.persianDateAdapter;
+		const orig = adapter.attachToPicker;
+		let before = null;
+		adapter.attachToPicker = function (picker, isolated) {
+			const factory = picker.model.PersianDate;
+			const raw = factory.date(new Date(1831, 2, 21, 12, 0, 0)).toArray();
+			before = {
+				isolated: !!factory.__jalaliIsolated,
+				label: raw[0] + "," + raw[1] + "," + raw[2],
+			};
+			return orig.call(this, picker, isolated);
+		};
+		openControl("Date", "1831-03-21");
+		adapter.attachToPicker = orig;
+		const month = control.$jalali_container
+			.find(".table-days td")
+			.toArray()
+			.filter((el) => !el.querySelector("span.other-month"))
+			.map((el) => el.dataset.date);
+		return {
+			before,
+			afterIsolated: !!control.jalali_picker.model.PersianDate.__jalaliIsolated,
+			after: control.$jalali_container.find("td.selected").attr("data-date"),
+			model: control.get_model_value(),
+			input: control.$input.val(),
+			month,
+		};
+	});
+	expect(result.before.isolated).toBe(false);
+	expect(result.before.label).toBe("1209,12,30");
+	expect(result.afterIsolated).toBe(true);
+	expect(result.after).toBe("1210,1,1");
+	expect(result.model).toBe("1831-03-21");
+	expect(result.input).toBe("1210/01/01");
+	expect(result.month[0]).toBe("1210,1,1");
+	expect(result.month).not.toContain("1209,12,30");
+});
+
+test("open/close cycles disconnect observers and document handlers", async ({ page }) => {
+	const result = await page.evaluate(async () => {
+		let liveObservers = 0;
+		const Native = window.MutationObserver;
+		window.MutationObserver = class extends Native {
+			observe(...args) {
+				liveObservers += 1;
+				this._tracked = true;
+				return super.observe(...args);
+			}
+			disconnect() {
+				if (this._tracked) {
+					liveObservers -= 1;
+					this._tracked = false;
+				}
+				return super.disconnect();
+			}
+		};
+		const handlers = (target) => {
+			const events = $._data(target, "events");
+			if (!events) return 0;
+			return Object.values(events).reduce((sum, list) => sum + list.length, 0);
+		};
+		const start = { observers: liveObservers, document: handlers(document), window: handlers(window) };
+		for (let i = 0; i < 12; i++) {
+			openControl("Date", "1831-03-21");
+			control.jalali_picker.hide();
+			await new Promise((resolve) => setTimeout(resolve, 20));
+		}
+		return {
+			start,
+			end: { observers: liveObservers, document: handlers(document), window: handlers(window) },
+			containers: document.querySelectorAll(".datepicker-container").length,
+		};
+	});
+	expect(result.containers).toBe(0);
+	expect(result.end.observers).toBe(result.start.observers);
+	expect(result.end.document).toBe(result.start.document);
+	expect(result.end.window).toBe(result.start.window);
+});

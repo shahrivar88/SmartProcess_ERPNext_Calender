@@ -157,6 +157,62 @@ test("isolated startOf('day') stays on the core Gregorian day of a leap pair", (
 	assert.equal(vendorFromJalali.getDate(), 22);
 });
 
+test("mocked Frappe: missing datepicker plugin leaves the Gregorian model untouched", () => {
+	const { ctx, frappe } = mockedFrappe({ loadAdapter: true });
+	ctx.persianDate = PersianDate;
+	vm.runInContext(controlsSrc, ctx);
+	const ctl = new frappe.ui.form.ControlDate();
+	let model = "1831-03-21";
+	ctl.$input = {
+		prop() {
+			return false;
+		},
+		val(value) {
+			if (value !== undefined) return this;
+			return "1210/01/01";
+		},
+	};
+	ctl.get_model_value = () => model;
+	ctl.format_for_input = (value) => value;
+	ctl.show_jalali_picker();
+	assert.equal(ctl.jalali_picker, undefined);
+	assert.equal(ctl.get_model_value(), "1831-03-21");
+	assert.equal(PersianDate.__jalaliCoreAdapter, undefined);
+});
+
+test("mocked Frappe: incompatible vendor signature does not open a picker", () => {
+	const { ctx, frappe } = mockedFrappe({ loadAdapter: true });
+	function Fake() {}
+	Fake.prototype = { format() {} };
+	ctx.persianDate = Fake;
+	vm.runInContext(controlsSrc, ctx);
+	const ctl = new frappe.ui.form.ControlDate();
+	ctl.$input = {
+		prop() {
+			return false;
+		},
+		val() {
+			return "1210/01/01";
+		},
+		persianDatepicker() {
+			throw new Error("datepicker must not start without an isolated constructor");
+		},
+	};
+	ctl.get_model_value = () => "1831-03-21";
+	ctl.format_for_input = (value) => value;
+	ctl.show_jalali_picker();
+	assert.equal(ctl.jalali_picker, undefined);
+	assert.equal(Fake.__jalaliCoreAdapter, undefined);
+});
+
+test("unsupported Gregorian display stays Gregorian instead of a wrong Jalali year", () => {
+	const { ctx, frappe } = mockedFrappe();
+	ctx.persianDate = PersianDate;
+	vm.runInContext(controlsSrc, ctx);
+	assert.equal(frappe.form.formatters.Date("1800-01-01"), "1800-01-01");
+	assert.equal(frappe.form.formatters.Date("1831-03-21"), "1210/01/01");
+});
+
 test("attachToPicker is a no-op without a picker factory and does not patch the vendor", () => {
 	const Isolated = adapter.createIsolatedConstructor(PersianDate, core).constructor;
 	assert.equal(adapter.attachToPicker(null, Isolated).ok, false);

@@ -55,6 +55,14 @@
 		}
 	}
 
+	// Civil-day shift. 864e5 is 24 elapsed hours and skips or repeats a local
+	// date when the zone transitions DST (America/New_York 2026-03-09 00:00).
+	function shiftLocalDays(ms, days) {
+		const date = new Date(ms);
+		date.setDate(date.getDate() + days);
+		return date;
+	}
+
 	function overwritePersian(instance, jy, jm, jd, core) {
 		let leap = false;
 		try {
@@ -146,7 +154,7 @@
 					return new Isolated([y, m, 1, 0, 0, 0, 0]);
 				case "weeks":
 				case "week":
-					return new Isolated(this.valueOf() - 864e5 * (this.calendar().weekday - 1));
+					return new Isolated(shiftLocalDays(this.valueOf(), -(this.calendar().weekday - 1)));
 				case "days":
 				case "day":
 					return new Isolated([y, m, d, 0, 0, 0, 0]);
@@ -180,9 +188,7 @@
 					return new Isolated([y, m, this.daysInMonth(y, m), 23, 59, 59]);
 				case "weeks":
 				case "week":
-					return this.startOf("week").add
-						? new Isolated(this.startOf("week").valueOf() + 6 * 864e5)
-						: new Isolated(this.valueOf());
+					return new Isolated(shiftLocalDays(this.startOf("week").valueOf(), 6));
 				case "days":
 				case "day":
 					return new Isolated([y, m, d, 23, 59, 59]);
