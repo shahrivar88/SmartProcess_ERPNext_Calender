@@ -11,6 +11,11 @@ Hardening on branch `hardening/jalali-production-release` after `1.6.2`.
 - Bind `persian-datepicker` to `jalali_core` so leap days match the mapping engine.
 - Isolate the picker constructor so global `persianDate` consumers stay unchanged.
 - Keep week boundaries on civil days across DST instead of shifting by `864e5` milliseconds.
+- Delete leftover `tabSingles` rows for this app's two System Settings fields on uninstall so a stale Check of `1` cannot re-enable the calendar after reinstall.
+
+### Tests
+
+- Run the 12-cycle picker open/close leak checks inside one page evaluate so Edge under full-suite load is not timed out by CDP round-trips.
 
 ### Documentation
 

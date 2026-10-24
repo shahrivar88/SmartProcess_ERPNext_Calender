@@ -8,8 +8,9 @@ bench --site SITE uninstall-app jalali_shamsi_datepicker
 
 - `System Settings.custom_enable_shamsi_jalali_calendar`
 - `System Settings.custom_date_storage_format` if present
+- leftover `tabSingles` rows for those two field names
 
-Frappe also removes Property Setters for those Custom Fields and writes Deleted Document rows.
+Frappe also removes Property Setters for those Custom Fields and writes Deleted Document rows. A leftover Singles value of `1` would otherwise re-enable the calendar on reinstall.
 
 ## What stays
 

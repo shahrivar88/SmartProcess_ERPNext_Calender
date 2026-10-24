@@ -322,10 +322,15 @@ test("open/close cycles disconnect observers and document handlers", async ({ pa
 			return Object.values(events).reduce((sum, list) => sum + list.length, 0);
 		};
 		const start = { observers: liveObservers, document: handlers(document), window: handlers(window) };
+		// Reopen the same control. A new ControlDate on the same input each cycle
+		// measures fixture churn, not one field's hide/show leak path.
+		openControl("Date", "1831-03-21");
+		control.jalali_picker.hide();
+		await new Promise((resolve) => setTimeout(resolve, 0));
 		for (let i = 0; i < 12; i++) {
-			openControl("Date", "1831-03-21");
+			control.show_jalali_picker();
 			control.jalali_picker.hide();
-			await new Promise((resolve) => setTimeout(resolve, 20));
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		}
 		return {
 			start,

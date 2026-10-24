@@ -101,10 +101,18 @@ test("app Python has no permission bypass, SQL, overrides or doc_events", () => 
 	assert.ok(pyFiles.length > 5);
 	for (const file of pyFiles) {
 		const src = fs.readFileSync(file, "utf8");
-		const rel = path.relative(ROOT, file);
+		const rel = path.relative(ROOT, file).replace(/\\/g, "/");
 		assert.doesNotMatch(src, /ignore_permissions/, rel);
-		assert.doesNotMatch(src, /\.sql\(|frappe\.db\.(set_value|delete|truncate|commit)|db_set\(/, rel);
 		assert.doesNotMatch(src, /override_whitelisted_methods|override_doctype_class|doc_events/, rel);
+		if (rel === "jalali_shamsi_datepicker/uninstall.py") {
+			// App-owned System Settings residue only. Custom Field.on_trash can leave
+			// a tabSingles Check of 1 that re-enables the calendar on reinstall.
+			assert.match(src, /frappe\.db\.delete\("Singles", \{"doctype": dt, "field": fieldname\}\)/);
+			assert.doesNotMatch(src, /\.sql\(|frappe\.db\.(set_value|truncate|commit)|db_set\(/, rel);
+			assert.doesNotMatch(src, /frappe\.db\.delete\((?!"Singles")/, rel);
+			continue;
+		}
+		assert.doesNotMatch(src, /\.sql\(|frappe\.db\.(set_value|delete|truncate|commit)|db_set\(/, rel);
 	}
 });
 

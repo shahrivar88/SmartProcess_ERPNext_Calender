@@ -30,3 +30,9 @@ The app does not read business documents on the server. It does not store API ke
 ## Scanners
 
 GitHub Actions runs Gitleaks, OSV-Scanner, Trivy, Semgrep and CodeQL. OSV-Scanner and Trivy cover lockfiles. They do not prove the minified vendor files are free of CVEs. See [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
+
+Full-history Gitleaks (reproducible; `fetch-depth: 0` in CI):
+
+```bash
+docker run --rm -v "$PWD:/src" zricethezav/gitleaks:v8.24.3 detect --source /src --verbose --redact
+```
