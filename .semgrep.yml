@@ -1,0 +1,46 @@
+rules:
+  - id: jalali-no-ignore-permissions
+    languages: [python]
+    severity: ERROR
+    message: Do not add ignore_permissions. Uninstall and patches must use Administrator context only.
+    patterns:
+      - pattern-either:
+          - pattern: ignore_permissions=True
+          - pattern: ignore_permissions = True
+          - pattern: ignore_permissions=true
+          - pattern: ignore_permissions = true
+
+  - id: jalali-no-override-whitelist
+    languages: [python]
+    severity: ERROR
+    message: Do not register override_whitelisted_methods or override_doctype_class.
+    patterns:
+      - pattern-either:
+          - pattern: override_whitelisted_methods
+          - pattern: override_doctype_class
+
+  - id: jalali-no-raw-sql-write
+    languages: [python]
+    severity: ERROR
+    message: Do not call frappe.db.sql or db_set from this app.
+    patterns:
+      - pattern-either:
+          - pattern: frappe.db.sql(...)
+          - pattern: frappe.db.set_value(...)
+          - pattern: db_set(...)
+
+  - id: jalali-no-eval
+    languages: [javascript]
+    severity: ERROR
+    message: Do not use eval or the Function constructor in application JavaScript.
+    paths:
+      include:
+        - jalali_shamsi_datepicker/public/js/jalali_core.js
+        - jalali_shamsi_datepicker/public/js/jalali_controls.js
+        - jalali_shamsi_datepicker/public/js/jalali_persian_date_adapter.js
+        - jalali_shamsi_datepicker/tests/**/*.js
+        - scripts/**/*.js
+    patterns:
+      - pattern-either:
+          - pattern: eval(...)
+          - pattern: new Function(...)

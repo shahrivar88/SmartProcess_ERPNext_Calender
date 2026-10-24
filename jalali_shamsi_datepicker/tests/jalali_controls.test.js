@@ -118,6 +118,10 @@ test("enabled setting patches once and formats Jalali without changing the value
 	assert.ok(new patchedDate() instanceof originals.ControlDate);
 	assert.equal(frappe.form.formatters.Date("2026-09-24"), "1405/07/02");
 	assert.equal(frappe.form.formatters.Datetime("2026-09-24 14:30:05"), "1405/07/02 14:30:05");
+	assert.equal(frappe.form.formatters.Date("1821-03-21"), "1200/01/01");
+	assert.equal(frappe.form.formatters.Date("1821-03-20"), "1821-03-20");
+	assert.equal(frappe.form.formatters.Date("2221-03-20"), "1599/12/29");
+	assert.equal(frappe.form.formatters.Date("2221-03-21"), "2221-03-21");
 
 	vm.runInContext(controlsSrc, ctx);
 	assert.equal(frappe.ui.form.ControlDate, patchedDate, "second load must not wrap again");
@@ -162,7 +166,69 @@ test("parse keeps Gregorian ISO input working (any digit system)", () => {
 	assert.equal(inst.parse("۲۰۲۶/۰۹/۲۴"), "2026-09-24");
 	// Non-date expressions still go to Frappe's own parse unchanged.
 	assert.equal(inst.parse("Today"), "Today");
+	assert.equal(inst.parse("+1d"), "+1d");
+	assert.equal(inst.parse("-2w"), "-2w");
 	assert.equal(inst.parse(""), "");
+});
+
+test("parse rejects recognized invalid Gregorian days and clocks without handing them to Frappe", () => {
+	const { env, inst } = makeInstance("datetime", { model: "2026-09-24 10:30:00" });
+	for (const bad of [
+		"2026-09-25 99:99:99",
+		"2026-09-25 25:00:00",
+		"2026-09-25 12:70:00",
+		"2026-09-25 12:30:99",
+		"2026-02-30",
+		"2026-13-01",
+		"2026-00-01",
+	]) {
+		env.frappe._msgprint_history.length = 0;
+		const result = inst.parse(bad);
+		assert.equal(result, "2026-09-24 10:30:00", bad);
+		assert.notEqual(result, "2026-09-25 23:59:59", bad);
+		assert.equal(env.frappe._msgprint_history.length, 1, bad);
+		assert.ok(env.frappe._msgprint_history[0].message.includes(bad.replace(/\s+/g, " ")), bad);
+	}
+	assert.equal(inst.parse("2026-09-25 00:00:00"), "2026-09-25 00:00:00");
+	assert.equal(inst.parse("2026-09-25 23:59:59"), "2026-09-25 23:59:59");
+	assert.equal(inst.parse("۲۰۲۶-۰۹-۲۵ ۲۳:۵۹:۵۹"), "2026-09-25 23:59:59");
+});
+
+test("parse rejects Jalali datetime with an invalid numeric clock", () => {
+	const { env, inst } = makeInstance("datetime", { model: "2026-09-24 10:30:00" });
+	for (const bad of ["1405/07/03 25:00:00", "14050703 99:99:99", "۱۴۰۵/۰۷/۰۳ 12:70:00"]) {
+		env.frappe._msgprint_history.length = 0;
+		assert.equal(inst.parse(bad), "2026-09-24 10:30:00", bad);
+		assert.equal(env.frappe._msgprint_history.length, 1, bad);
+	}
+	assert.equal(inst.parse("1405/07/03 00:00:00"), "2026-09-25 00:00:00");
+	assert.equal(inst.parse("1405/07/03 23:59:59"), "2026-09-25 23:59:59");
+});
+
+test("parse on a Dialog without a backing doc restores the previous valid value", () => {
+	const { env, inst } = makeInstance("date", { model: "" });
+	assert.equal(inst.get_model_value(), "", "reproduces the Dialog-without-doc case");
+	inst.set_formatted_input("2026-09-25");
+	assert.equal(inst._jalali_last_valid, "2026-09-25");
+
+	const result = inst.parse("1404/12/30");
+	assert.equal(result, "2026-09-25", "must not clear the Dialog field");
+	assert.equal(inst.last_formatted, "2026-09-25");
+	assert.equal(env.frappe._msgprint_history.length, 1);
+});
+
+test("parse on a form still prefers the live model value over instance memory", () => {
+	const { inst } = makeInstance("date", { model: "2026-09-24" });
+	inst.set_formatted_input("2026-01-01");
+	assert.equal(inst.parse("1404/12/30"), "2026-09-24");
+});
+
+test("parse treats an empty field as an intentional clear", () => {
+	const { env, inst } = makeInstance("date", { model: "" });
+	inst.set_formatted_input("2026-09-25");
+	assert.equal(inst.parse(""), "");
+	assert.equal(inst._jalali_last_valid, "");
+	assert.equal(env.frappe._msgprint_history.length, 0);
 });
 
 test("parse converts compact Jalali input (any digit system) into the Gregorian model value", () => {
@@ -215,11 +281,20 @@ test("build_jalali_date_options derives min/max timestamps from Gregorian df val
 
 	inst.df = { min_date: "2026-02-30" }; // not a real day -> ignored, no roll-over
 	const opts2 = inst.build_jalali_date_options();
-	assert.equal(opts2.minDate, undefined);
+	assert.equal(opts2.minDate, new Date(1821, 2, 21).getTime());
 
 	inst.df = {};
 	const empty = inst.build_jalali_date_options();
-	assert.equal(Object.keys(empty).length, 0, "empty df must produce no options");
+	assert.equal(empty.minDate, new Date(1821, 2, 21).getTime());
+	assert.equal(empty.maxDate, new Date(2221, 2, 20).getTime());
+});
+
+test("build_jalali_date_options clamps df min/max to the supported calendar range", () => {
+	const { inst } = makeInstance("date");
+	inst.df = { min_date: "1800-01-01", max_date: "2300-01-01" };
+	const opts = inst.build_jalali_date_options();
+	assert.equal(opts.minDate, new Date(1821, 2, 21).getTime());
+	assert.equal(opts.maxDate, new Date(2221, 2, 20).getTime());
 });
 
 test("build_jalali_date_options turns disabled_dates into a local-day checkDate", () => {

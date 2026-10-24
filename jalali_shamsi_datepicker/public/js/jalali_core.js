@@ -211,6 +211,20 @@
 		return g.gy + "-" + pad(g.gm) + "-" + pad(g.gd);
 	}
 
+	// Numeric clock accepted after a recognized date: "H:mm", "HH:mm", "H:mm:ss",
+	// "HH:mm:ss" (Latin digits after normalizeDigits). Hour 0-23, minute/second 0-59.
+	// Empty is valid (date-only). Anything else, including a trailing remainder, is invalid.
+	function parseNumericClock(text) {
+		if (!text) return { valid: true, time: "" };
+		const m = /^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/.exec(text);
+		if (!m) return { valid: false };
+		const h = Number(m[1]);
+		const mi = Number(m[2]);
+		const s = m[3] == null ? 0 : Number(m[3]);
+		if (h > 23 || mi > 59 || s > 59) return { valid: false };
+		return { valid: true, time: text };
+	}
+
 	/**
 	 * Parse user input that may be a Jalali date, optionally followed by a time part.
 	 * Accepts separated "YYYY/MM/DD" (also "-" or ".") and compact "YYYYMMDD" (exactly 8
@@ -220,8 +234,8 @@
 	 *
 	 * Returns:
 	 *   null                                   input is not Jalali-shaped (let Frappe handle it)
-	 *   { valid: false, input }                Jalali-shaped but impossible (e.g. 1403/12/31 in a common year)
-	 *   { valid: true, gregorian, time }       gregorian is "YYYY-MM-DD", time is the untouched remainder
+	 *   { valid: false, input }                Jalali-shaped but impossible date or numeric time
+	 *   { valid: true, gregorian, time }       gregorian is "YYYY-MM-DD"; time is the clock text
 	 */
 	function parseJalaliInput(value) {
 		if (value == null) return null;
@@ -238,12 +252,19 @@
 		if (!isValidJalaliDate(jy, jm, jd)) {
 			return { valid: false, input: text };
 		}
-		return { valid: true, gregorian: jalaliToGregorianString(jy, jm, jd), time };
+		const clock = parseNumericClock(time);
+		if (!clock.valid) {
+			return { valid: false, input: text };
+		}
+		return { valid: true, gregorian: jalaliToGregorianString(jy, jm, jd), time: clock.time };
 	}
 
-	// Typing a Gregorian date in ISO-ish form (any digit system) should keep working like
-	// Frappe's own parse; e.g. "2026/09/24" or Persian-digit "۲۰۲۶/۰۹/۲۴ ۱۴:۳۰". Returns
-	// "YYYY-MM-DD[ HH:mm:ss]" (zero-padded) or null when unparsable/unverifiable.
+	// Typing a Gregorian date in ISO-ish form (any digit system). Three outcomes:
+	//   null                    not this syntax (let Frappe handle Today, +1d, dd-mm-yyyy, …)
+	//   { valid: false, input } recognized YYYY-first date/time but the day or clock is impossible
+	//   { valid: true, gregorian, time }  gregorian is "YYYY-MM-DD"; time is "" or "HH:mm[:ss]"
+	// Never clamp an out-of-range clock: Frappe's non-strict moment parse would store another
+	// real datetime (e.g. 25:00:00 → 01:00:00 next day).
 	function normalizeGregorianInput(value) {
 		if (value == null) return null;
 		const text = normalizeDigits(value);
@@ -256,22 +277,40 @@
 		const gm = Number(m[2]);
 		const gd = Number(m[3]);
 		const check = d2g(g2d(gy, gm, gd));
-		if (check.gy !== gy || check.gm !== gm || check.gd !== gd) return null;
-		let iso = gy + "-" + pad(gm) + "-" + pad(gd);
-		const time = m[4] ? m[4].trim() : "";
-		if (time) {
-			const tp = time.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(.*)$/);
-			if (tp) {
-				const h = Math.min(Number(tp[1]) || 0, 23);
-				const mi = Math.min(Number(tp[2]) || 0, 59);
-				const s = Math.min(Number(tp[3]) || 0, 59);
-				iso += " " + pad(h) + ":" + pad(mi) + ":" + pad(s) + (tp[4] || "");
-			}
+		if (check.gy !== gy || check.gm !== gm || check.gd !== gd) {
+			return { valid: false, input: text };
 		}
-		return iso;
+		const clock = parseNumericClock(m[4] ? m[4].trim() : "");
+		if (!clock.valid) {
+			return { valid: false, input: text };
+		}
+		return {
+			valid: true,
+			gregorian: gy + "-" + pad(gm) + "-" + pad(gd),
+			time: clock.time,
+		};
+	}
+
+	function isSupportedJalaliYear(jy) {
+		return Number.isInteger(jy) && jy >= MIN_JALALI_YEAR && jy <= MAX_JALALI_YEAR;
+	}
+
+	function supportedGregorianBounds() {
+		return {
+			start: jalaliToGregorianString(MIN_JALALI_YEAR, 1, 1),
+			end: jalaliToGregorianString(
+				MAX_JALALI_YEAR,
+				12,
+				jalaliMonthLength(MAX_JALALI_YEAR, 12)
+			),
+		};
 	}
 
 	return {
+		MIN_JALALI_YEAR,
+		MAX_JALALI_YEAR,
+		isSupportedJalaliYear,
+		supportedGregorianBounds,
 		normalizeDigits,
 		escapeHtml,
 		gregorianDateStringToTimestamp,

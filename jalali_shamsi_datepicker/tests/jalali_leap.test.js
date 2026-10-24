@@ -1,12 +1,7 @@
-// Vendor (persian-datepicker's persian-date, astronomical leap mode) vs core
-// (jalaali-js) over the full renderable range. The picker renders Jalali days
-// with the vendored library, but every selection is re-validated with the core
-// converter before it is committed, so any day the vendor renders that the core
-// rejects would be DANGEROUS (it could never be committed to the model).
-//
-// That set must stay exactly the 5 dated days below (all Esfand 30s the vendor
-// thinks exist in common years) — if it grows, core validation is no longer a
-// complete safety net for the picker.
+// RAW vendor (persian-date, no adapter) vs core (jalaali-js). Production loads
+// jalali_persian_date_adapter.js so the picker never sees this disagreement;
+// this file keeps the unpatched 1830-day / 5-Esfand-30 fingerprint so a vendor
+// upgrade cannot silently change the leap table. Do not install the adapter here.
 //
 // NOTE: persian-date's astronomical conversion is expensive (~1ms/date), so this
 // file makes ONE full pass (~90s) and asserts everything from it.
@@ -15,6 +10,11 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const core = require("../public/js/jalali_core.js");
 const PersianDate = require("../public/js/persian-date.min.js");
+assert.equal(
+	PersianDate.__jalaliCoreAdapter,
+	undefined,
+	"this file must see the raw vendor; do not load jalali_persian_date_adapter.js here"
+);
 
 function pad(n) {
 	return String(n).padStart(2, "0");

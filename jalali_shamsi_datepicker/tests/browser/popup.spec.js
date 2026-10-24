@@ -120,7 +120,7 @@ test.beforeEach(async ({ page }) => {
       msgprint() {},
     };
   });
-  for (const file of ['persian-date.min.js', 'persian-datepicker.min.js', 'jalali_core.js', 'jalali_controls.js']) {
+  for (const file of ['persian-date.min.js', 'persian-datepicker.min.js', 'jalali_core.js', 'jalali_persian_date_adapter.js', 'jalali_controls.js']) {
     await page.addScriptTag({ path: path.join(root, 'jalali_shamsi_datepicker/public/js', file) });
   }
   for (const file of ['persian-datepicker.min.css', 'custom.css']) {
@@ -248,25 +248,39 @@ test('viewport edges clamp; modal/Quick Entry stays above backdrop', async ({ pa
 test('repeat open/close cleans events, preserves host handlers and cannot reopen after close', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.evaluate(() => {
+  // One in-page loop: 12 CDP round-trips plus 5ms sleeps were Edge-timeout brittle
+  // after a long worker, without proving a leak. Yield once after hide so the
+  // deferred picker.destroy() runs before the next show. Assertions stay exact.
+  const result = await page.evaluate(async () => {
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
     window.hostChanges = 0;
     $('input').on('change.host', () => hostChanges++);
     openControl();
-    window.eventCount = () => [document, window, $('input')[0]].reduce((n, el) => n + Object.values($._data(el, 'events') || {}).reduce((a, list) => a + list.length, 0), 0);
+    const eventCount = () => [document, window, $('input')[0]].reduce(
+      (n, el) => n + Object.values($._data(el, 'events') || {}).reduce((a, list) => a + list.length, 0),
+      0
+    );
     control.jalali_picker.hide();
+    await tick();
+    const before = eventCount();
+    for (let i = 0; i < 12; i++) {
+      control.show_jalali_picker();
+      control.jalali_picker.hide();
+      await tick();
+    }
+    $('input').trigger('change');
+    return {
+      before,
+      after: eventCount(),
+      router: Object.values($._data(frappe.router.jq[0], 'events') || {}).flat().length,
+      containers: document.querySelectorAll('.datepicker-container').length,
+      hostChanges,
+    };
   });
-  await page.waitForTimeout(20);
-  const before = await page.evaluate(() => eventCount());
-  for (let i = 0; i < 12; i++) {
-    await page.evaluate(() => { control.show_jalali_picker(); control.jalali_picker.hide(); });
-    await page.waitForTimeout(5);
-  }
-  await page.waitForTimeout(250);
-  expect(await page.evaluate(() => eventCount())).toBe(before);
-  expect(await page.evaluate(() => Object.values($._data(frappe.router.jq[0], 'events') || {}).flat().length)).toBe(0);
-  await expect(page.locator('.datepicker-container')).toHaveCount(0);
-  await page.evaluate(() => $('input').trigger('change'));
-  expect(await page.evaluate(() => hostChanges)).toBe(1);
+  expect(result.after).toBe(result.before);
+  expect(result.router).toBe(0);
+  expect(result.containers).toBe(0);
+  expect(result.hostChanges).toBe(1);
   expect(errors).toEqual([]);
 });
 

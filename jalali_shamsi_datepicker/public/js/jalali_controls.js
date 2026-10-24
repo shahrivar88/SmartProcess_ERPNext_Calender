@@ -22,11 +22,19 @@
 (function () {
 	const ns = (window.jalali_shamsi_datepicker = window.jalali_shamsi_datepicker || {});
 	const core = ns.core;
+	const adapter = ns.persianDateAdapter;
 
 	if (ns.controls_installed) return;
 	if (!(frappe.boot && frappe.boot.jalali_calendar_enabled)) return;
-	if (!core || !frappe.ui.form.ControlDate || !frappe.ui.form.ControlDatetime) return;
-	ns.controls_installed = true;
+	if (!frappeControlsCompatible(core)) return;
+
+	const originals = {
+		ControlDate: frappe.ui.form.ControlDate,
+		ControlDatetime: frappe.ui.form.ControlDatetime,
+		ControlTime: frappe.ui.form.ControlTime,
+		formatDate: frappe.form.formatters.Date,
+		formatDatetime: frappe.form.formatters.Datetime,
+	};
 
 	const DATE_FMT = "YYYY/MM/DD";
 	const DATETIME_FMT = "YYYY/MM/DD HH:mm:ss";
@@ -40,7 +48,10 @@
 		const datePart = space === -1 ? text : text.slice(0, space);
 		const timePart = space === -1 ? "" : text.slice(space);
 		const jalali = core.gregorianToJalaliString(frappe.datetime.user_to_str(datePart));
-		return jalali ? jalali + timePart : text;
+		if (!jalali) return text;
+		const year = Number(jalali.split("/")[0]);
+		if (!core.isSupportedJalaliYear(year)) return text;
+		return jalali + timePart;
 	}
 
 	function pad(n) {
@@ -51,6 +62,38 @@
 		const n = parseInt(core.normalizeDigits(String(value || "")), 10);
 		if (Number.isNaN(n)) return null;
 		return Math.min(max, Math.max(min, n));
+	}
+
+	function frappeControlsCompatible(coreApi) {
+		if (!coreApi || typeof coreApi.gregorianToJalaliString !== "function") return false;
+		if (!frappe.ui || !frappe.ui.form || !frappe.form || !frappe.form.formatters) return false;
+		const DateCtl = frappe.ui.form.ControlDate;
+		const DatetimeCtl = frappe.ui.form.ControlDatetime;
+		if (typeof DateCtl !== "function" || typeof DatetimeCtl !== "function") return false;
+		if (DateCtl.__jalaliShamsiWrapped || DatetimeCtl.__jalaliShamsiWrapped) return false;
+		const dateProto = DateCtl.prototype;
+		return typeof dateProto.format_for_input === "function" && typeof dateProto.parse === "function";
+	}
+
+	function isolatedPersianDate() {
+		if (ns.isolatedPersianDate) return ns.isolatedPersianDate;
+		if (!adapter || typeof adapter.createIsolatedConstructor !== "function" || typeof window.persianDate !== "function") {
+			return null;
+		}
+		const created = adapter.createIsolatedConstructor(window.persianDate, core);
+		if (!created.ok) return null;
+		ns.isolatedPersianDate = created.constructor;
+		return ns.isolatedPersianDate;
+	}
+
+	function restoreOriginals() {
+		try { frappe.ui.form.ControlDate = originals.ControlDate; } catch (err) { /* keep restoring */ }
+		try { frappe.ui.form.ControlDatetime = originals.ControlDatetime; } catch (err) { /* keep restoring */ }
+		try { frappe.ui.form.ControlTime = originals.ControlTime; } catch (err) { /* keep restoring */ }
+		try { frappe.form.formatters.Date = originals.formatDate; } catch (err) { /* keep restoring */ }
+		try { frappe.form.formatters.Datetime = originals.formatDatetime; } catch (err) { /* keep restoring */ }
+		ns.controls_installed = false;
+		ns.isolatedPersianDate = null;
 	}
 
 	function withJalali(Base, mode) {
@@ -77,6 +120,7 @@
 			set_formatted_input(value) {
 				if (!isDatetime && !isTime) {
 					super.set_formatted_input(value);
+					this.remember_valid_value(value);
 					return;
 				}
 				// ControlDatetime/Time.set_formatted_input only write the input when air-datepicker exists.
@@ -84,6 +128,7 @@
 					value = isTime ? frappe.datetime.now_time() : frappe.datetime.now_datetime();
 				}
 				this.$input && this.$input.val(this.format_for_input(value));
+				this.remember_valid_value(value);
 			}
 
 			format_for_input(value) {
@@ -93,7 +138,34 @@
 
 			set_disp_area(value) {
 				super.set_disp_area(value);
+				this.remember_valid_value(value);
 				if (!isTime) this.show_stored_value(value);
+			}
+
+			// Instance-local last committed model value. Dialogs without a backing doc
+			// have an empty get_model_value(); remember the last value Frappe wrote here.
+			remember_valid_value(value) {
+				if (value == null || value === "") return;
+				const text = String(value);
+				if (["today", "now"].includes(text.toLowerCase())) return;
+				this._jalali_last_valid = text;
+			}
+
+			previous_valid_value() {
+				const model = this.get_model_value && this.get_model_value();
+				if (model) return model;
+				return this._jalali_last_valid || "";
+			}
+
+			reject_invalid_input(input) {
+				const current = this.previous_valid_value();
+				frappe.msgprint({
+					title: __("Invalid Date"),
+					indicator: "red",
+					message: __("{0} is not a valid Jalali date.", [core.escapeHtml(input)]),
+				});
+				setTimeout(() => this.set_formatted_input(current), 0);
+				return current;
 			}
 
 			// Shows the raw model value (what is saved to the database) under the field.
@@ -114,32 +186,25 @@
 
 			parse(value) {
 				if (isTime) return super.parse(value);
+				if (value == null || String(value).trim() === "") {
+					this._jalali_last_valid = "";
+					return super.parse(value);
+				}
 				const parsed = core.parseJalaliInput(value);
 				if (!parsed) {
-					// Not Jalali-shaped: keep Gregorian input (with any digit system) working
-					// exactly like Frappe's own parse, and leave everything else untouched.
-					const iso = core.normalizeGregorianInput(value);
-					if (iso) {
-						const [datePart, timePart] = iso.split(" ");
+					// Not Jalali-shaped: keep Gregorian ISO-ish input (any digit system)
+					// working, but never hand a recognized-invalid clock to Frappe.
+					const greg = core.normalizeGregorianInput(value);
+					if (greg) {
+						if (!greg.valid) return this.reject_invalid_input(greg.input);
 						const userText =
-							frappe.datetime.str_to_user(datePart, false, true) +
-							(!isDatetime || !timePart ? "" : " " + timePart);
+							frappe.datetime.str_to_user(greg.gregorian, false, true) +
+							(!isDatetime || !greg.time ? "" : " " + greg.time);
 						return super.parse(userText);
 					}
 					return super.parse(value);
 				}
-				if (!parsed.valid) {
-					const current = this.get_model_value();
-					frappe.msgprint({
-						title: __("Invalid Date"),
-						indicator: "red",
-						// parsed.input is user text and can contain markup (e.g. in the time part);
-						// msgprint appends message as HTML, so escape it before interpolating.
-						message: __("{0} is not a valid Jalali date.", [core.escapeHtml(parsed.input)]),
-					});
-					setTimeout(() => this.set_formatted_input(current), 0);
-					return current;
-				}
+				if (!parsed.valid) return this.reject_invalid_input(parsed.input);
 				let userText = frappe.datetime.str_to_user(parsed.gregorian, false, true);
 				if (isDatetime && parsed.time) {
 					userText += " " + parsed.time;
@@ -154,13 +219,16 @@
 			build_jalali_date_options() {
 				const df = this.df || {};
 				const opts = {};
-				if (df.min_date) {
-					const ts = core.gregorianDateStringToTimestamp(df.min_date);
-					if (ts != null) opts.minDate = ts;
+				const bounds = core.supportedGregorianBounds();
+				const rangeMin = core.gregorianDateStringToTimestamp(bounds.start);
+				const rangeMax = core.gregorianDateStringToTimestamp(bounds.end);
+				const userMin = df.min_date ? core.gregorianDateStringToTimestamp(df.min_date) : null;
+				const userMax = df.max_date ? core.gregorianDateStringToTimestamp(df.max_date) : null;
+				if (rangeMin != null) {
+					opts.minDate = userMin == null ? rangeMin : Math.max(userMin, rangeMin);
 				}
-				if (df.max_date) {
-					const ts = core.gregorianDateStringToTimestamp(df.max_date);
-					if (ts != null) opts.maxDate = ts;
+				if (rangeMax != null) {
+					opts.maxDate = userMax == null ? rangeMax : Math.min(userMax, rangeMax);
 				}
 				const disabled = core.disabledDatesSet(df.disabled_dates);
 				if (disabled) {
@@ -173,6 +241,9 @@
 
 			show_jalali_picker() {
 				if (this.jalali_picker || !this.$input || this.$input.prop("readonly") || this.$input.prop("disabled")) return;
+				if (typeof this.$input.persianDatepicker !== "function") return;
+				const isolated = isolatedPersianDate();
+				if (!isolated || !adapter) return;
 
 				const typed = this.$input.val();
 				const initial = isTime ? null : core.parseJalaliInput(typed);
@@ -215,6 +286,11 @@
 					onHide: () => this.destroy_jalali_picker(picker),
 					...this.build_jalali_date_options(),
 				});
+				const attached = adapter.attachToPicker(picker, isolated);
+				if (!attached.ok) {
+					try { picker.destroy(); } catch (err) { /* leave the field usable as typed Jalali */ }
+					return;
+				}
 				this.jalali_picker = picker;
 				this._jalali_ns = ".jalaliPicker" + (++pickerSequence);
 				this.install_jalali_view(picker);
@@ -240,9 +316,16 @@
 				} else if (initial && initial.valid) {
 					const [gy, gm, gd] = initial.gregorian.split("-").map(Number);
 					const [h, mi, s] = (initial.time || "0:0:0").split(":").map(Number);
-					this._jalali_syncing = true;
-					picker.setDate(new Date(gy, gm - 1, gd, h || 0, mi || 0, s || 0).getTime());
-					this._jalali_syncing = false;
+					const ts = new Date(gy, gm - 1, gd, h || 0, mi || 0, s || 0).getTime();
+					const bounds = this.build_jalali_date_options();
+					const inside =
+						(bounds.minDate == null || ts >= bounds.minDate) &&
+						(bounds.maxDate == null || ts <= bounds.maxDate);
+					if (inside) {
+						this._jalali_syncing = true;
+						picker.setDate(ts);
+						this._jalali_syncing = false;
+					}
 					// setDate rewrote the input; keep the user's not-yet-committed text (e.g. compact 14050703).
 					this.$input.val(typed);
 				}
@@ -582,20 +665,24 @@
 		};
 	}
 
-	frappe.ui.form.ControlDate = withJalali(frappe.ui.form.ControlDate, "date");
-	frappe.ui.form.ControlDatetime = withJalali(frappe.ui.form.ControlDatetime, "datetime");
-	if (frappe.ui.form.ControlTime) {
-		frappe.ui.form.ControlTime = withJalali(frappe.ui.form.ControlTime, "time");
+	try {
+		frappe.ui.form.ControlDate = withJalali(originals.ControlDate, "date");
+		frappe.ui.form.ControlDatetime = withJalali(originals.ControlDatetime, "datetime");
+		if (originals.ControlTime) {
+			frappe.ui.form.ControlTime = withJalali(originals.ControlTime, "time");
+		}
+		frappe.form.formatters.Date = function (value, ...args) {
+			return userToJalaliText(originals.formatDate.call(this, value, ...args));
+		};
+		frappe.form.formatters.Datetime = function (value, ...args) {
+			return userToJalaliText(originals.formatDatetime.call(this, value, ...args));
+		};
+		frappe.ui.form.ControlDate.__jalaliShamsiWrapped = true;
+		frappe.ui.form.ControlDatetime.__jalaliShamsiWrapped = true;
+		if (frappe.ui.form.ControlTime) frappe.ui.form.ControlTime.__jalaliShamsiWrapped = true;
+		ns.controls_installed = true;
+		$(() => $("body").addClass("jalali-calendar-enabled"));
+	} catch (err) {
+		restoreOriginals();
 	}
-
-	const formatDate = frappe.form.formatters.Date;
-	const formatDatetime = frappe.form.formatters.Datetime;
-	frappe.form.formatters.Date = function (value, ...args) {
-		return userToJalaliText(formatDate.call(this, value, ...args));
-	};
-	frappe.form.formatters.Datetime = function (value, ...args) {
-		return userToJalaliText(formatDatetime.call(this, value, ...args));
-	};
-
-	$(() => $("body").addClass("jalali-calendar-enabled"));
 })();

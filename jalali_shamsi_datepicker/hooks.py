@@ -3,7 +3,7 @@ app_title = "Jalali Shamsi Datepicker"
 app_icon = "octicon octicon-calendar"
 app_color = "blue"
 app_publisher = "Ideenemium"
-app_description = "A best solution to change date and datetime fields to Shamsi(Jalali) Calendar."
+app_description = "Jalali display and input for Frappe Date and Datetime fields. Stored values stay Gregorian."
 app_email = "ideenemium@gmail.com"
 app_license = "MIT"
 required_apps = ["frappe"]
@@ -29,6 +29,7 @@ app_include_css = [
 app_include_js = [
     "/assets/jalali_shamsi_datepicker/js/persian-date.min.js",
     "/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=3",
-    "/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=4",
-    "/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=16",
+    "/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=6",
+    "/assets/jalali_shamsi_datepicker/js/jalali_persian_date_adapter.js?v=3",
+    "/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=18",
 ]

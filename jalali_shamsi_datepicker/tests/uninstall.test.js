@@ -16,6 +16,10 @@ import json, sys, types
 sys.path.insert(0, sys.argv[1])
 calls = []
 frappe = types.ModuleType("frappe")
+class DB:
+    def delete(self, doctype, filters=None, **kwargs):
+        calls.append({"api": "db.delete", "doctype": doctype, "filters": filters, "kwargs": kwargs})
+frappe.db = DB()
 def get_all(doctype, filters=None, pluck=None, **kwargs):
     calls.append({"api": "get_all", "doctype": doctype, "filters": filters, "pluck": pluck, "kwargs": kwargs})
     return ["CF-" + filters["fieldname"]]
@@ -47,8 +51,13 @@ function run() {
 const APP_FIELDS = ["custom_enable_shamsi_jalali_calendar", "custom_date_storage_format"];
 
 function assertOnlyAppCustomFields(calls, expectedFields) {
+	const singles = calls.filter((c) => c.api === "db.delete");
 	const reads = calls.filter((c) => c.api === "get_all");
 	const deletes = calls.filter((c) => c.api === "delete_doc");
+	assert.deepEqual(
+		singles.map((c) => [c.doctype, c.filters, c.kwargs]),
+		expectedFields.map((f) => ["Singles", { doctype: "System Settings", field: f }, {}])
+	);
 	assert.deepEqual(
 		reads.map((c) => [c.doctype, c.filters, c.pluck]),
 		expectedFields.map((f) => ["Custom Field", { dt: "System Settings", fieldname: f }, "name"])
@@ -60,8 +69,8 @@ function assertOnlyAppCustomFields(calls, expectedFields) {
 	for (const c of deletes) {
 		assert.deepEqual(c.kwargs, { force: true }, "no permission bypass, no other flags");
 	}
-	// Any other frappe API (frappe.db, sql, set_value, ...) would raise AttributeError in the stub.
-	assert.ok(calls.every((c) => ["get_all", "delete_doc", "clear_cache"].includes(c.api)));
+	// Any other frappe API (sql, set_value, ignore_permissions, ...) would raise AttributeError.
+	assert.ok(calls.every((c) => ["get_all", "delete_doc", "clear_cache", "db.delete"].includes(c.api)));
 }
 
 test("before_uninstall deletes only this app's two Custom Fields, without ignore_permissions", { skip: !hasPython && "python not found" }, () => {

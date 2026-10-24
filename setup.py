@@ -13,7 +13,7 @@ from jalali_shamsi_datepicker import __version__ as version
 setup(
     name="jalali_shamsi_datepicker",
     version=version,
-    description="A best solution to change date and datetime fields to Shamsi(Jalali) Calendar.",
+    description="Jalali display and input for Frappe Date and Datetime fields. Stored values stay Gregorian.",
     author="Ideenemium",
     author_email="ideenemium@gmail.com",
     packages=find_packages(),

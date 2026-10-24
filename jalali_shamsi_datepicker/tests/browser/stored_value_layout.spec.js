@@ -102,7 +102,7 @@ async function setup(page, { enabled = true, dir = 'ltr' } = {}) {
       msgprint() {},
     };
   }, enabled);
-  for (const file of ['persian-date.min.js', 'persian-datepicker.min.js', 'jalali_core.js', 'jalali_controls.js']) {
+  for (const file of ['persian-date.min.js', 'persian-datepicker.min.js', 'jalali_core.js', 'jalali_persian_date_adapter.js', 'jalali_controls.js']) {
     await page.addScriptTag({ path: path.join(root, 'jalali_shamsi_datepicker/public/js', file) });
   }
   for (const file of ['persian-datepicker.min.css', 'custom.css']) {

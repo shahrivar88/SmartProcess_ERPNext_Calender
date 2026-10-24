@@ -1,5 +1,5 @@
 // Static assertions about versioning, packaging, hooks, CSS tokens and the
-// fixture scope, so the 1.6.2 release stays consistent and narrowly scoped.
+// fixture scope, so the 1.6.3 release stays consistent and narrowly scoped.
 // Run: node --test jalali_shamsi_datepicker/tests/metadata.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -9,15 +9,22 @@ const path = require("node:path");
 const ROOT = path.join(__dirname, "..", ".."); // repo root
 const APP = path.join(ROOT, "jalali_shamsi_datepicker"); // bench app package dir
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
-const VERSION = "1.6.2";
+const VERSION = "1.6.3";
 
-test("version is 1.6.2 in the package, the repo root, pyproject and npm metadata", () => {
-	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['\"]1\.6\.2['\"]/);
-	assert.match(read("__init__.py"), /__version__\s*=\s*['\"]1\.6\.2['\"]/);
+test("package version is a dotted numeric triple", () => {
+	assert.match(VERSION, /^\d+\.\d+\.\d+$/);
+});
+
+test("version is 1.6.3 in the package, the repo root, pyproject and npm metadata", () => {
+	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['"]1\.6\.3['"]/);
+	assert.match(read("__init__.py"), /__version__\s*=\s*['"]1\.6\.3['"]/);
 	const pyproject = read("pyproject.toml");
-	assert.match(pyproject, /^version\s*=\s*"1\.6\.2"$/m);
+	assert.match(pyproject, /^version\s*=\s*"1\.6\.3"$/m);
 	assert.match(pyproject, /SmartProcess_ERPNext_Calender/);
-	assert.doesNotMatch(pyproject, /nidyasoft/);
+	assert.match(pyproject, /^Homepage = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
+	assert.match(pyproject, /^Repository = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
+	assert.match(pyproject, /^Upstream = "https:\/\/github.com\/nidyasoft\/jalali_shamsi_datepicker"$/m);
+	assert.doesNotMatch(pyproject, /Homepage = ".*nidyasoft/);
 	assert.equal(JSON.parse(read("package.json")).version, VERSION);
 	const lock = JSON.parse(read("package-lock.json"));
 	assert.equal(lock.version, VERSION);
@@ -38,8 +45,14 @@ test("hooks.py bumps asset query strings and keeps fixture scope narrow", () => 
 	const hooks = read("jalali_shamsi_datepicker/hooks.py");
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/css/custom.css?v=17"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=3"'));
-	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=4"'));
-	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=16"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=6"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_persian_date_adapter.js?v=3"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=18"'));
+	const coreIdx = hooks.indexOf("jalali_core.js");
+	const adapterIdx = hooks.indexOf("jalali_persian_date_adapter.js");
+	const controlsIdx = hooks.indexOf("jalali_controls.js");
+	assert.ok(coreIdx !== -1 && adapterIdx !== -1 && controlsIdx !== -1);
+	assert.ok(coreIdx < adapterIdx && adapterIdx < controlsIdx, "adapter must load after core and before controls");
 	// Vendor assets are untouched since 1.6.0, so their URLs must not change.
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/css/persian-datepicker.min.css"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/persian-date.min.js"'));
@@ -92,10 +105,18 @@ test("app Python has no permission bypass, SQL, overrides or doc_events", () => 
 	assert.ok(pyFiles.length > 5);
 	for (const file of pyFiles) {
 		const src = fs.readFileSync(file, "utf8");
-		const rel = path.relative(ROOT, file);
+		const rel = path.relative(ROOT, file).replace(/\\/g, "/");
 		assert.doesNotMatch(src, /ignore_permissions/, rel);
-		assert.doesNotMatch(src, /\.sql\(|frappe\.db\.(set_value|delete|truncate|commit)|db_set\(/, rel);
 		assert.doesNotMatch(src, /override_whitelisted_methods|override_doctype_class|doc_events/, rel);
+		if (rel === "jalali_shamsi_datepicker/uninstall.py") {
+			// App-owned System Settings residue only. Custom Field.on_trash can leave
+			// a tabSingles Check of 1 that re-enables the calendar on reinstall.
+			assert.match(src, /frappe\.db\.delete\("Singles", \{"doctype": dt, "field": fieldname\}\)/);
+			assert.doesNotMatch(src, /\.sql\(|frappe\.db\.(set_value|truncate|commit)|db_set\(/, rel);
+			assert.doesNotMatch(src, /frappe\.db\.delete\((?!"Singles")/, rel);
+			continue;
+		}
+		assert.doesNotMatch(src, /\.sql\(|frappe\.db\.(set_value|delete|truncate|commit)|db_set\(/, rel);
 	}
 });
 
@@ -107,4 +128,57 @@ test("custom_field fixture contains exactly the in-app System Settings switch", 
 	assert.equal(fixture[0].fieldname, "custom_enable_shamsi_jalali_calendar");
 	assert.equal(fixture[0].fieldtype, "Check");
 	assert.equal(fixture[0].default, "0");
+});
+
+test("LICENSE keeps the upstream nidyasoft MIT notice", () => {
+	const license = read("LICENSE");
+	assert.match(license, /MIT License/);
+	assert.match(license, /Copyright \(c\) 2025 nidyasoft/);
+	assert.doesNotMatch(license, /Copyright \(c\) 20\d\d SmartProcess/);
+});
+
+test("open-source handoff files exist and name the fork plus upstream", () => {
+	const required = [
+		"README.md",
+		"README.en.md",
+		"AGENTS.md",
+		"CHANGELOG.md",
+		"SECURITY.md",
+		"CONTRIBUTING.md",
+		"SUPPORT.md",
+		"THIRD_PARTY_NOTICES.md",
+		"docs/ARCHITECTURE.md",
+		"docs/DATA_INTEGRITY.md",
+		"docs/FRAPPE_COMPATIBILITY.md",
+		"docs/TEST_MATRIX.md",
+		"docs/INSTALLATION.md",
+		"docs/UPGRADE.md",
+		"docs/UNINSTALL.md",
+		"docs/RELEASE_PROCESS.md",
+		"docs/RELEASE_NOTES_1.6.3.md",
+		"docs/PRODUCTION_DEPLOYMENT.md",
+		"docs/ROLLBACK.md",
+		"docs/TROUBLESHOOTING.md",
+		".agents/skills/jalali-calendar-invariants/SKILL.md",
+		".github/workflows/test.yml",
+		".github/workflows/security.yml",
+		".github/dependabot.yml",
+		".semgrep.yml",
+		"scripts/check_docs.js",
+		"scripts/verify_release_package.py",
+	];
+	for (const rel of required) {
+		assert.ok(fs.existsSync(path.join(ROOT, rel)), "missing " + rel);
+	}
+	const readme = read("README.md");
+	const readmeEn = read("README.en.md");
+	for (const text of [readme, readmeEn]) {
+		assert.match(text, /nidyasoft\/jalali_shamsi_datepicker/);
+		assert.match(text, /SmartProcess_ERPNext_Calender/);
+		assert.match(text, /jalali_shamsi_datepicker/);
+		assert.match(text, /custom_enable_shamsi_jalali_calendar/);
+		assert.match(text, /1821-03-21/);
+		assert.match(text, /2221-03-20/);
+	}
+	assert.doesNotMatch(read("LICENSE"), /READY FOR RELEASE/);
 });
