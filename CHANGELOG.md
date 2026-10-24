@@ -1,25 +1,36 @@
 # Changelog
 
-This file records published app versions and later hardening on the same version number. Version `1.6.2` is not bumped in this document.
+This file records published app versions. Historical entries for `1.6.2` and earlier stay as written.
 
-## Unreleased
+## 1.6.3
 
-Hardening on branch `hardening/jalali-production-release` after `1.6.2`.
+Prepared on branch `hardening/jalali-production-release`. A GitHub Release exists only after a later authorized publication step.
+
+This version hardens Jalali display and input on Frappe 16.35. Stored `Date` and `Datetime` values stay Gregorian. No business-data migration is required.
 
 ### Fixed
 
 - Bind `persian-datepicker` to `jalali_core` so leap days match the mapping engine.
 - Isolate the picker constructor so global `persianDate` consumers stay unchanged.
 - Keep week boundaries on civil days across DST instead of shifting by `864e5` milliseconds.
+- Reject invalid Jalali dates and clocks without rolling them to another day.
 - Delete leftover `tabSingles` rows for this app's two System Settings fields on uninstall so a stale Check of `1` cannot re-enable the calendar after reinstall.
 
 ### Tests
 
+- Add exhaustive mapping, leap-year, isolation and DST week coverage.
 - Run the 12-cycle picker open/close leak checks inside one page evaluate so Edge under full-suite load is not timed out by CDP round-trips.
 
-### Documentation
+### Documentation and CI
 
-- Add bilingual README, architecture docs, third-party notices, agent handoff and CI.
+- Add bilingual README, architecture docs, third-party notices, agent handoff and Security CI.
+- Compatibility claim stays Frappe 16.35 and ERPNext 16.35.0.
+
+### Limits
+
+- `DateRange` stays standard Gregorian.
+- Jalali years outside 1200 to 1599 stay Gregorian.
+- LICENSE copyright remains Copyright (c) 2025 nidyasoft.
 
 ## 1.6.2
 

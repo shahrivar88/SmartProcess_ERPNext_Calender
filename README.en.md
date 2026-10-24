@@ -6,7 +6,8 @@ A Frappe app for Jalali display and input on `Date` and `Datetime` fields. The s
 
 This repository is a SmartProcess-maintained fork. Upstream project: [nidyasoft/jalali_shamsi_datepicker](https://github.com/nidyasoft/jalali_shamsi_datepicker). The `LICENSE` file still carries Copyright (c) 2025 nidyasoft.
 
-- Current version: `1.6.2`
+- Current version: `1.6.3`
+- Release notes: [docs/RELEASE_NOTES_1.6.3.md](docs/RELEASE_NOTES_1.6.3.md)
 - Frappe app name: `jalali_shamsi_datepicker`
 - GitHub repository name: `SmartProcess_ERPNext_Calender`
 

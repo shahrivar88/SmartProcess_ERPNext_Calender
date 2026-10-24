@@ -1,5 +1,5 @@
 // Static assertions about versioning, packaging, hooks, CSS tokens and the
-// fixture scope, so the 1.6.2 release stays consistent and narrowly scoped.
+// fixture scope, so the 1.6.3 release stays consistent and narrowly scoped.
 // Run: node --test jalali_shamsi_datepicker/tests/metadata.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -9,13 +9,14 @@ const path = require("node:path");
 const ROOT = path.join(__dirname, "..", ".."); // repo root
 const APP = path.join(ROOT, "jalali_shamsi_datepicker"); // bench app package dir
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
-const VERSION = "1.6.2";
+const VERSION = "1.6.3";
+const VERSION_RE = VERSION.replace(/\./g, "\\.");
 
-test("version is 1.6.2 in the package, the repo root, pyproject and npm metadata", () => {
-	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['\"]1\.6\.2['\"]/);
-	assert.match(read("__init__.py"), /__version__\s*=\s*['\"]1\.6\.2['\"]/);
+test("version is 1.6.3 in the package, the repo root, pyproject and npm metadata", () => {
+	assert.match(read("jalali_shamsi_datepicker/__init__.py"), new RegExp(`__version__\\s*=\\s*['"]${VERSION_RE}['"]`));
+	assert.match(read("__init__.py"), new RegExp(`__version__\\s*=\\s*['"]${VERSION_RE}['"]`));
 	const pyproject = read("pyproject.toml");
-	assert.match(pyproject, /^version\s*=\s*"1\.6\.2"$/m);
+	assert.match(pyproject, new RegExp(`^version\\s*=\\s*"${VERSION_RE}"$`, "m"));
 	assert.match(pyproject, /SmartProcess_ERPNext_Calender/);
 	assert.match(pyproject, /^Homepage = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
 	assert.match(pyproject, /^Repository = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
@@ -151,6 +152,7 @@ test("open-source handoff files exist and name the fork plus upstream", () => {
 		"docs/UPGRADE.md",
 		"docs/UNINSTALL.md",
 		"docs/RELEASE_PROCESS.md",
+		"docs/RELEASE_NOTES_1.6.3.md",
 		"docs/PRODUCTION_DEPLOYMENT.md",
 		"docs/ROLLBACK.md",
 		"docs/TROUBLESHOOTING.md",

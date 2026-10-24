@@ -59,6 +59,6 @@ Do not mark a suite passed from a targeted subset.
 
 ## Release
 
-- Do not bump `1.6.2`, tag, or create a GitHub Release unless asked.
+- Do not bump `1.6.3`, tag, or create a GitHub Release unless asked.
 - Do not auto-upgrade `persian-date` or `persian-datepicker`.
 - Do not write READY FOR RELEASE unless a later phase verified CI, clean install, upgrade and uninstall.

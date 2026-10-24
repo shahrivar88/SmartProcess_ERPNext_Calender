@@ -1,6 +1,6 @@
 [project]
 name = "jalali_shamsi_datepicker"
-version = "1.6.2"
+version = "1.6.3"
 description = "Jalali display and input for Frappe Date and Datetime fields. Stored values stay Gregorian."
 authors = [
     { name = "Ideenemium", email = "ideenemium@gmail.com" }
