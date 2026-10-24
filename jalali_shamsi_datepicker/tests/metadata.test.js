@@ -10,13 +10,16 @@ const ROOT = path.join(__dirname, "..", ".."); // repo root
 const APP = path.join(ROOT, "jalali_shamsi_datepicker"); // bench app package dir
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 const VERSION = "1.6.3";
-const VERSION_RE = VERSION.replace(/\./g, "\\.");
+
+test("package version is a dotted numeric triple", () => {
+	assert.match(VERSION, /^\d+\.\d+\.\d+$/);
+});
 
 test("version is 1.6.3 in the package, the repo root, pyproject and npm metadata", () => {
-	assert.match(read("jalali_shamsi_datepicker/__init__.py"), new RegExp(`__version__\\s*=\\s*['"]${VERSION_RE}['"]`));
-	assert.match(read("__init__.py"), new RegExp(`__version__\\s*=\\s*['"]${VERSION_RE}['"]`));
+	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['"]1\.6\.3['"]/);
+	assert.match(read("__init__.py"), /__version__\s*=\s*['"]1\.6\.3['"]/);
 	const pyproject = read("pyproject.toml");
-	assert.match(pyproject, new RegExp(`^version\\s*=\\s*"${VERSION_RE}"$`, "m"));
+	assert.match(pyproject, /^version\s*=\s*"1\.6\.3"$/m);
 	assert.match(pyproject, /SmartProcess_ERPNext_Calender/);
 	assert.match(pyproject, /^Homepage = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
 	assert.match(pyproject, /^Repository = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);

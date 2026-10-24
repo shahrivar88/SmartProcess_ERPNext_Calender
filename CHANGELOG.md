@@ -20,6 +20,7 @@ This version hardens Jalali display and input on Frappe 16.35. Stored `Date` and
 
 - Add exhaustive mapping, leap-year, isolation and DST week coverage.
 - Run the 12-cycle picker open/close leak checks inside one page evaluate so Edge under full-suite load is not timed out by CDP round-trips.
+- Assert package versions with a literal dotted triple instead of a `String.replace` regex.
 
 ### Documentation and CI
 
