@@ -1,0 +1,159 @@
+name: Security
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  osv:
+    name: OSV-Scanner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Scan lockfiles with OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@6ad84ce1ef2d4124ba333b221894c133c4a970ea # v2.7.0
+        with:
+          scan-args: |-
+            --recursive
+            ./
+        # OSV-Scanner reads package-lock.json and Python manifests.
+        # It does not inventory vendored persian-date or persian-datepicker files.
+
+  trivy:
+    name: Trivy filesystem
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Scan repository with Trivy
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # 0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: false
+        # Trivy covers lockfiles and common manifests. Treat a clean result as
+        # lockfile coverage, not as a CVE audit of the minified vendor files.
+
+  semgrep-project:
+    name: Semgrep project rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run project Semgrep rules
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.110.0 \
+            semgrep scan --config .semgrep.yml --error --metrics=off
+
+  semgrep-community:
+    name: Semgrep community rules on first-party code
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run community Python and JavaScript rules
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.110.0 \
+            semgrep scan --config p/python --config p/javascript --error --metrics=off \
+            --include 'jalali_shamsi_datepicker/**/*.py' \
+            --include 'jalali_shamsi_datepicker/public/js/jalali_core.js' \
+            --include 'jalali_shamsi_datepicker/public/js/jalali_controls.js' \
+            --include 'jalali_shamsi_datepicker/public/js/jalali_persian_date_adapter.js' \
+            --include 'jalali_shamsi_datepicker/tests/**/*.js' \
+            --include 'scripts/**'
+        # Community rules are required on first-party source. Minified vendor
+        # files are scanned in the vendor job below. This include list is not a
+        # silent skip of application code.
+
+  semgrep-vendor-report:
+    name: Semgrep community rules on vendored JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Scan vendored minified JavaScript
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.110.0 \
+            semgrep scan --config p/javascript --metrics=off --json \
+            --include 'jalali_shamsi_datepicker/public/js/persian-date.min.js' \
+            --include 'jalali_shamsi_datepicker/public/js/persian-datepicker.min.js' \
+            > semgrep-vendor.json
+          python3 - <<'PY'
+          import json, sys
+          data = json.load(open("semgrep-vendor.json", encoding="utf-8"))
+          results = data.get("results", [])
+          print(f"vendor Semgrep findings: {len(results)}")
+          for item in results[:50]:
+              extra = item.get("extra", {})
+              print(f"{item.get('path')}:{item.get('start', {}).get('line')} {extra.get('severity')} {extra.get('message', '')[:160]}")
+          if data.get("errors"):
+              print("scanner errors:", data["errors"], file=sys.stderr)
+              sys.exit(1)
+          print("Vendor Semgrep is report-only because minified third-party JavaScript is not a reliable pattern SAST target.")
+          PY
+        # This job fails only when the scanner errors. Findings stay in the log.
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript, python]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e1c541575b54ca50e5f5dcc7da77615756cf9f51 # v3.39.1
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@e1c541575b54ca50e5f5dcc7da77615756cf9f51 # v3.39.1
+        with:
+          category: "/language:${{ matrix.language }}"
+        # No paths-ignore. CodeQL may skip or poorly analyze minified vendor files.
+        # Do not treat a clean CodeQL result as vendor coverage unless the log
+        # shows those files were extracted.

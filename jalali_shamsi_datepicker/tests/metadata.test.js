@@ -17,7 +17,10 @@ test("version is 1.6.2 in the package, the repo root, pyproject and npm metadata
 	const pyproject = read("pyproject.toml");
 	assert.match(pyproject, /^version\s*=\s*"1\.6\.2"$/m);
 	assert.match(pyproject, /SmartProcess_ERPNext_Calender/);
-	assert.doesNotMatch(pyproject, /nidyasoft/);
+	assert.match(pyproject, /^Homepage = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
+	assert.match(pyproject, /^Repository = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
+	assert.match(pyproject, /^Upstream = "https:\/\/github.com\/nidyasoft\/jalali_shamsi_datepicker"$/m);
+	assert.doesNotMatch(pyproject, /Homepage = ".*nidyasoft/);
 	assert.equal(JSON.parse(read("package.json")).version, VERSION);
 	const lock = JSON.parse(read("package-lock.json"));
 	assert.equal(lock.version, VERSION);
@@ -113,4 +116,56 @@ test("custom_field fixture contains exactly the in-app System Settings switch", 
 	assert.equal(fixture[0].fieldname, "custom_enable_shamsi_jalali_calendar");
 	assert.equal(fixture[0].fieldtype, "Check");
 	assert.equal(fixture[0].default, "0");
+});
+
+test("LICENSE keeps the upstream nidyasoft MIT notice", () => {
+	const license = read("LICENSE");
+	assert.match(license, /MIT License/);
+	assert.match(license, /Copyright \(c\) 2025 nidyasoft/);
+	assert.doesNotMatch(license, /Copyright \(c\) 20\d\d SmartProcess/);
+});
+
+test("open-source handoff files exist and name the fork plus upstream", () => {
+	const required = [
+		"README.md",
+		"README.en.md",
+		"AGENTS.md",
+		"CHANGELOG.md",
+		"SECURITY.md",
+		"CONTRIBUTING.md",
+		"SUPPORT.md",
+		"THIRD_PARTY_NOTICES.md",
+		"docs/ARCHITECTURE.md",
+		"docs/DATA_INTEGRITY.md",
+		"docs/FRAPPE_COMPATIBILITY.md",
+		"docs/TEST_MATRIX.md",
+		"docs/INSTALLATION.md",
+		"docs/UPGRADE.md",
+		"docs/UNINSTALL.md",
+		"docs/RELEASE_PROCESS.md",
+		"docs/PRODUCTION_DEPLOYMENT.md",
+		"docs/ROLLBACK.md",
+		"docs/TROUBLESHOOTING.md",
+		".agents/skills/jalali-calendar-invariants/SKILL.md",
+		".github/workflows/test.yml",
+		".github/workflows/security.yml",
+		".github/dependabot.yml",
+		".semgrep.yml",
+		"scripts/check_docs.js",
+		"scripts/verify_release_package.py",
+	];
+	for (const rel of required) {
+		assert.ok(fs.existsSync(path.join(ROOT, rel)), "missing " + rel);
+	}
+	const readme = read("README.md");
+	const readmeEn = read("README.en.md");
+	for (const text of [readme, readmeEn]) {
+		assert.match(text, /nidyasoft\/jalali_shamsi_datepicker/);
+		assert.match(text, /SmartProcess_ERPNext_Calender/);
+		assert.match(text, /jalali_shamsi_datepicker/);
+		assert.match(text, /custom_enable_shamsi_jalali_calendar/);
+		assert.match(text, /1821-03-21/);
+		assert.match(text, /2221-03-20/);
+	}
+	assert.doesNotMatch(read("LICENSE"), /READY FOR RELEASE/);
 });

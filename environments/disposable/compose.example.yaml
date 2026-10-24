@@ -1,0 +1,25 @@
+# Example only. Copy this file out of the repository and replace placeholders.
+# Do not point these volumes at an operational site.
+
+services:
+  backend:
+    image: frappe/erpnext:v16.35.0
+    environment:
+      SITE_NAME: jalali_disposable
+      DB_HOST: db
+      DB_PASSWORD: CHANGE_ME
+      ADMIN_PASSWORD: CHANGE_ME
+    depends_on:
+      - db
+    # Mount a clone of this app as apps/jalali_shamsi_datepicker inside the bench.
+    # Do not mount operational sites or encryption keys here.
+
+  db:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: CHANGE_ME
+    volumes:
+      - jalali_disposable_db:/var/lib/mysql
+
+volumes:
+  jalali_disposable_db:

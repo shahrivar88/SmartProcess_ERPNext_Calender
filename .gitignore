@@ -13,3 +13,4 @@ dist/
 build/
 test-results/
 playwright-report/
+graphify-out/
