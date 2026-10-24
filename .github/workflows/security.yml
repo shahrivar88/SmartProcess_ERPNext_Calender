@@ -111,9 +111,9 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep:1.110.0 \
-            semgrep scan --config p/javascript --metrics=off --json \
-            --include 'jalali_shamsi_datepicker/public/js/persian-date.min.js' \
-            --include 'jalali_shamsi_datepicker/public/js/persian-datepicker.min.js' \
+            semgrep scan --config p/javascript --metrics=off --json --no-git-ignore \
+            jalali_shamsi_datepicker/public/js/persian-date.min.js \
+            jalali_shamsi_datepicker/public/js/persian-datepicker.min.js \
             > semgrep-vendor.json
           python3 - <<'PY'
           import json, sys

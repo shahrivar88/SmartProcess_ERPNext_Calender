@@ -34,7 +34,16 @@ REQUIRED = (
 )
 
 
+def ensure_setuptools() -> None:
+    try:
+        import setuptools  # noqa: F401
+    except ImportError:
+        print("setuptools is missing; installing it for sdist verification", file=sys.stderr)
+        subprocess.run([sys.executable, "-m", "pip", "install", "setuptools>=69"], check=True)
+
+
 def main() -> int:
+    ensure_setuptools()
     dist_dir = Path(tempfile.mkdtemp(prefix="jalali-sdist-"))
     try:
         cmd = [sys.executable, "setup.py", "sdist", "--dist-dir", str(dist_dir)]

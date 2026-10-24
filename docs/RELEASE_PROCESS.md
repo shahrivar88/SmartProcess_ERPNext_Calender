@@ -28,7 +28,7 @@ The repo has dual packaging:
 - `setup.py` + `MANIFEST.in` for setuptools / bench
 - `pyproject.toml` with `flit_core` for the PEP 517 backend
 
-`scripts/verify_release_package.py` builds the setuptools sdist and checks required files. It does not remove flit.
+`scripts/verify_release_package.py` builds the setuptools sdist and checks required files. It does not remove flit. GitHub-hosted Python 3.12 does not ship setuptools, so CI installs it before this script.
 
 ## Scanners
 
