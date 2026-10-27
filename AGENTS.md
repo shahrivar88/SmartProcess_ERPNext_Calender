@@ -70,7 +70,7 @@ After runtime JS or Python changes, run Node tests, Playwright, the exhaustive m
 
 - Edit `main` unless the user asked for a merge
 - Create a GitHub Release or release tag
-- Bump `1.6.3` unless the user asked
+- Bump `1.6.4` unless the user asked
 - Deploy or migrate an operational site
 - Use an operational site as a disposable test site
 - Force-push

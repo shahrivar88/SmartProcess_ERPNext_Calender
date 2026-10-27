@@ -6,8 +6,8 @@
 
 این مخزن یک fork نگهداری‌شده توسط SmartProcess است. پروژهٔ بالادستی: [nidyasoft/jalali_shamsi_datepicker](https://github.com/nidyasoft/jalali_shamsi_datepicker). دارندهٔ کپی‌رایت در `LICENSE` همان `nidyasoft` سال ۲۰۲۵ است و عوض نشده است.
 
-- نسخه فعلی: `1.6.3`
-- یادداشت انتشار: [docs/RELEASE_NOTES_1.6.3.md](docs/RELEASE_NOTES_1.6.3.md)
+- نسخه فعلی: `1.6.4`
+- یادداشت انتشار: [docs/RELEASE_NOTES_1.6.4.md](docs/RELEASE_NOTES_1.6.4.md)
 - نام اپ Frappe: `jalali_shamsi_datepicker`
 - نام مخزن GitHub: `SmartProcess_ERPNext_Calender`
 

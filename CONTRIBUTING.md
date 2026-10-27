@@ -25,11 +25,11 @@ npm run test:browser
 
 ## Pull requests
 
-- Target `hardening/jalali-production-release` unless a maintainer asks for another branch.
+- Target `main` unless a maintainer asks for another branch.
 - Keep the diff to one problem.
 - Add or update a regression test for a behavior change.
 - Run `npm test`, `npm run test:docs` and `npm run test:pack` when you touch runtime files, docs or packaging.
-- Do not bump `1.6.3` unless a maintainer asked for a release.
+- Do not bump `1.6.4` unless a maintainer asked for a release.
 
 ## Vendor changes
 

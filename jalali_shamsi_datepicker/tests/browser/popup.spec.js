@@ -245,6 +245,47 @@ test('viewport edges clamp; modal/Quick Entry stays above backdrop', async ({ pa
   await expect(page.locator('.jalali-picker')).toHaveCount(0);
 });
 
+test('grid row editor stacks the sheet above form-in-grid and accepts a real click', async ({ page }) => {
+  const hit = await page.evaluate(() => {
+    $('#host').removeClass('modal').addClass('form-in-grid').css({ left: 300, zIndex: 1039 });
+    $('<form class="form-in-grid" id="grid-cover"></form>').css({
+      position: 'fixed',
+      left: 0,
+      top: 0,
+      width: '100%',
+      height: '100%',
+      zIndex: 1039,
+      background: 'rgba(0,0,0,0.01)',
+    }).appendTo(document.body);
+    openControl('Date', '2026-09-24');
+    const picker = document.querySelector('.datepicker-container.jalali-picker');
+    const box = picker.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    const top = document.elementFromPoint(x, y);
+    return {
+      zIndex: getComputedStyle(picker).zIndex,
+      hitPicker: !!(top && top.closest('.datepicker-container.jalali-picker')),
+      hitCover: !!(top && top.id === 'grid-cover'),
+      ordinaryZ: jalali_shamsi_datepicker.resolveJalaliPickerZIndex({ closest: () => ({ length: 0 }) }),
+    };
+  });
+  expect(hit.zIndex).toBe('1049');
+  expect(hit.hitPicker).toBe(true);
+  expect(hit.hitCover).toBe(false);
+  expect(hit.ordinaryZ).toBe(5);
+  await page.locator('td[data-date="1405,7,4"]').click();
+  expect(await page.locator('#host input').inputValue()).toBe('1405/07/04');
+  expect(await page.evaluate(() => control.parse(control.$input.val()))).toBe('2026-09-26');
+  await page.evaluate(() => {
+    if (control.jalali_picker) control.jalali_picker.hide();
+    $('#grid-cover').remove();
+    $('#host').removeClass('form-in-grid').css({ zIndex: '' });
+    openControl('Date', '2026-09-24');
+  });
+  expect(await page.locator('.jalali-picker').evaluate(el => getComputedStyle(el).zIndex)).toBe('5');
+});
+
 test('repeat open/close cleans events, preserves host handlers and cannot reopen after close', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));

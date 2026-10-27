@@ -336,6 +336,56 @@ test("select_jalali_today keeps the datetime time part from the system-zone valu
 	assert.equal(picker.hidden, true);
 });
 
+test("resolveJalaliPickerZIndex stays under page-head for ordinary fields", () => {
+	const { ctx } = patchedFrappe(true);
+	const resolve = ctx.jalali_shamsi_datepicker.resolveJalaliPickerZIndex;
+	assert.equal(typeof resolve, "function");
+	assert.equal(resolve({ closest: () => ({ length: 0 }) }), 5);
+	assert.equal(resolve(null), 5);
+});
+
+test("resolveJalaliPickerZIndex rises above the computed grid row editor layer", () => {
+	const { ctx } = patchedFrappe(true);
+	const resolve = ctx.jalali_shamsi_datepicker.resolveJalaliPickerZIndex;
+	const $input = {
+		closest(sel) {
+			if (sel === ".modal") return { length: 0 };
+			if (sel === ".form-in-grid, .grid-form") return { length: 1, get: () => ({ id: "grid" }) };
+			return { length: 0 };
+		},
+	};
+	assert.equal(resolve($input, (el, fallback) => (el && el.id === "grid" ? 1039 : fallback)), 1049);
+	assert.equal(resolve($input, (_el, fallback) => fallback), 1049);
+	assert.equal(resolve($input, () => 2000), 2010);
+});
+
+test("resolveJalaliPickerZIndex prefers a modal over a nested grid form", () => {
+	const { ctx } = patchedFrappe(true);
+	const resolve = ctx.jalali_shamsi_datepicker.resolveJalaliPickerZIndex;
+	const $input = {
+		closest(sel) {
+			if (sel === ".modal") return { length: 1, get: () => ({ id: "modal" }) };
+			if (sel === ".form-in-grid, .grid-form") return { length: 1, get: () => ({ id: "grid" }) };
+			return { length: 0 };
+		},
+	};
+	assert.equal(resolve($input, (el) => (el.id === "modal" ? 1050 : 1039)), 1060);
+});
+
+test("resolveJalaliPickerZIndex is per-input so two Date fields do not share a layer", () => {
+	const { ctx } = patchedFrappe(true);
+	const resolve = ctx.jalali_shamsi_datepicker.resolveJalaliPickerZIndex;
+	const ordinary = { closest: () => ({ length: 0 }) };
+	const grid = {
+		closest(sel) {
+			if (sel === ".form-in-grid, .grid-form") return { length: 1, get: () => ({ id: "grid" }) };
+			return { length: 0 };
+		},
+	};
+	assert.equal(resolve(ordinary), 5);
+	assert.equal(resolve(grid, () => 1039), 1049);
+});
+
 test("select_jalali_today (time mode) uses now_time without any tz juggling", () => {
 	const { env, inst } = makeInstance("time");
 	env.frappe.datetime.now_time = () => "10:30:00";

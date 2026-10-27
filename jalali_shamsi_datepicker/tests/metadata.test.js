@@ -1,5 +1,5 @@
 // Static assertions about versioning, packaging, hooks, CSS tokens and the
-// fixture scope, so the 1.6.3 release stays consistent and narrowly scoped.
+// fixture scope, so the 1.6.4 release stays consistent and narrowly scoped.
 // Run: node --test jalali_shamsi_datepicker/tests/metadata.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -9,17 +9,17 @@ const path = require("node:path");
 const ROOT = path.join(__dirname, "..", ".."); // repo root
 const APP = path.join(ROOT, "jalali_shamsi_datepicker"); // bench app package dir
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
-const VERSION = "1.6.3";
+const VERSION = "1.6.4";
 
 test("package version is a dotted numeric triple", () => {
 	assert.match(VERSION, /^\d+\.\d+\.\d+$/);
 });
 
-test("version is 1.6.3 in the package, the repo root, pyproject and npm metadata", () => {
-	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['"]1\.6\.3['"]/);
-	assert.match(read("__init__.py"), /__version__\s*=\s*['"]1\.6\.3['"]/);
+test("version is 1.6.4 in the package, the repo root, pyproject and npm metadata", () => {
+	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['"]1\.6\.4['"]/);
+	assert.match(read("__init__.py"), /__version__\s*=\s*['"]1\.6\.4['"]/);
 	const pyproject = read("pyproject.toml");
-	assert.match(pyproject, /^version\s*=\s*"1\.6\.3"$/m);
+	assert.match(pyproject, /^version\s*=\s*"1\.6\.4"$/m);
 	assert.match(pyproject, /SmartProcess_ERPNext_Calender/);
 	assert.match(pyproject, /^Homepage = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
 	assert.match(pyproject, /^Repository = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
@@ -47,7 +47,7 @@ test("hooks.py bumps asset query strings and keeps fixture scope narrow", () => 
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/persian-datepicker.min.js?v=3"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_core.js?v=6"'));
 	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_persian_date_adapter.js?v=3"'));
-	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=18"'));
+	assert.ok(hooks.includes('"/assets/jalali_shamsi_datepicker/js/jalali_controls.js?v=20"'));
 	const coreIdx = hooks.indexOf("jalali_core.js");
 	const adapterIdx = hooks.indexOf("jalali_persian_date_adapter.js");
 	const controlsIdx = hooks.indexOf("jalali_controls.js");
@@ -156,6 +156,7 @@ test("open-source handoff files exist and name the fork plus upstream", () => {
 		"docs/UNINSTALL.md",
 		"docs/RELEASE_PROCESS.md",
 		"docs/RELEASE_NOTES_1.6.3.md",
+		"docs/RELEASE_NOTES_1.6.4.md",
 		"docs/PRODUCTION_DEPLOYMENT.md",
 		"docs/ROLLBACK.md",
 		"docs/TROUBLESHOOTING.md",

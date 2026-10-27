@@ -7,7 +7,7 @@ This document is the release checklist. Completing documentation and CI is not a
 - Merge to `main` unless asked
 - Create a git tag
 - Create a GitHub Release
-- Bump `1.6.3`
+- Bump `1.6.4`
 - Deploy
 
 ## Before a future release candidate
@@ -21,7 +21,7 @@ This document is the release checklist. Completing documentation and CI is not a
 7. Upgrade and uninstall are checked on that disposable site.
 8. Vendor hashes in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) still match the files.
 
-Release notes for `1.6.3` live in [RELEASE_NOTES_1.6.3.md](RELEASE_NOTES_1.6.3.md). Creating a git tag or GitHub Release is a later authorized step.
+Release notes for `1.6.4` live in [RELEASE_NOTES_1.6.4.md](RELEASE_NOTES_1.6.4.md). Creating a git tag or GitHub Release is a later authorized step.
 
 ## Packaging
 
