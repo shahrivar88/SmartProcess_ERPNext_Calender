@@ -1,6 +1,27 @@
 # Changelog
 
-This file records published app versions. Historical entries for `1.6.2` and earlier stay as written.
+This file records published app versions. Historical entries for `1.6.3` and earlier stay as written.
+
+## 1.6.4
+
+This version keeps the Jalali picker above a Frappe 16 Grid row editor. Stored `Date` and `Datetime` values stay Gregorian. No business-data migration is required.
+
+### Fixed
+
+- Raise the picker layer from the computed z-index of `.form-in-grid` or `.modal`, not from a fixed `102`.
+- Keep ordinary Date fields under the sticky `.page-head` (`z-index` 5).
+- Prefer a modal layer when a child table sits inside a dialog.
+
+### Tests
+
+- Add unit coverage for ordinary, grid, modal and two-field layer choice.
+- Add a Playwright check that `elementFromPoint` hits the picker above a `1039` cover and that a day click still writes Gregorian.
+
+### Limits
+
+- `DateRange` stays standard Gregorian.
+- Jalali years outside 1200 to 1599 stay Gregorian.
+- LICENSE copyright remains Copyright (c) 2025 nidyasoft.
 
 ## 1.6.3
 

@@ -39,7 +39,36 @@
 	const DATE_FMT = "YYYY/MM/DD";
 	const DATETIME_FMT = "YYYY/MM/DD HH:mm:ss";
 	const TIME_FMT = "HH:mm:ss";
+	const PAGE_HEAD_SAFE_Z = 5;
+	const LAYER_GAP = 10;
+	const DEFAULT_MODAL_Z = 1050;
+	// Frappe 16 .form-in-grid sits near Bootstrap modal layers (measured 1039).
+	// A previous fixed 102 opened the sheet behind the row editor.
+	const DEFAULT_GRID_FORM_Z = 1039;
 	let pickerSequence = 0;
+
+	function readNumericZIndex(el, fallback) {
+		if (!el || typeof window === "undefined" || !window.getComputedStyle) return fallback;
+		const n = parseInt(window.getComputedStyle(el).zIndex, 10);
+		return Number.isFinite(n) ? n : fallback;
+	}
+
+	function resolveJalaliPickerZIndex($input, readZIndex) {
+		const readZ = typeof readZIndex === "function" ? readZIndex : readNumericZIndex;
+		if (!$input || typeof $input.closest !== "function") return PAGE_HEAD_SAFE_Z;
+		const $modal = $input.closest(".modal");
+		if ($modal && $modal.length) {
+			const el = $modal.get ? $modal.get(0) : $modal[0];
+			return readZ(el, DEFAULT_MODAL_Z) + LAYER_GAP;
+		}
+		const $grid = $input.closest(".form-in-grid, .grid-form");
+		if ($grid && $grid.length) {
+			const el = $grid.get ? $grid.get(0) : $grid[0];
+			return readZ(el, DEFAULT_GRID_FORM_Z) + LAYER_GAP;
+		}
+		return PAGE_HEAD_SAFE_Z;
+	}
+	ns.resolveJalaliPickerZIndex = resolveJalaliPickerZIndex;
 
 	// "<user date>[ <time>]" (Frappe user format) -> "<jalali date>[ <time>]"; unchanged if unparsable.
 	function userToJalaliText(text) {
@@ -448,16 +477,11 @@
 				// Relative plot so the container gets a real width/height for centering.
 				$plot.css({ position: "relative", left: "0", top: "0" });
 				// Fixed to the viewport so the sheet tracks the field while the desk scrolls.
-				// Outside dialogs keep a low z-index so the sticky .page-head (z-index 6)
-				// still covers the sheet when the field scrolls under it; inside a modal or
-				// Quick Entry the modal backdrop (z-index ~1040/1050) would hide the sheet,
-				// so raise it above the modal element itself.
-				let zIndex = 5;
+				// Layer is context-aware: page-head stays above ordinary fields (z-index 5);
+				// grid row editors and modals raise the sheet just above their own stacking
+				// context so clicks hit the calendar, not the covering form.
 				const $modal = this.$input.closest(".modal");
-				if ($modal.length) {
-					const modalZ = parseInt(window.getComputedStyle($modal.get(0)).zIndex, 10);
-					zIndex = (Number.isFinite(modalZ) ? modalZ : 1050) + 10;
-				}
+				const zIndex = resolveJalaliPickerZIndex(this.$input);
 				$cont.css({ position: "fixed", margin: 0, zIndex });
 				const input = this.$input.get(0);
 				if (!input.isConnected || !input.getClientRects().length) {
