@@ -157,6 +157,7 @@ test("open-source handoff files exist and name the fork plus upstream", () => {
 		"docs/RELEASE_PROCESS.md",
 		"docs/RELEASE_NOTES_1.6.3.md",
 		"docs/RELEASE_NOTES_1.6.4.md",
+		"docs/NAMING_SERIES.md",
 		"docs/PRODUCTION_DEPLOYMENT.md",
 		"docs/ROLLBACK.md",
 		"docs/TROUBLESHOOTING.md",

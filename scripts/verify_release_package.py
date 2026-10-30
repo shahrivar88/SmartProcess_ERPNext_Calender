@@ -21,6 +21,8 @@ REQUIRED = (
     "jalali_shamsi_datepicker/hooks.py",
     "jalali_shamsi_datepicker/boot.py",
     "jalali_shamsi_datepicker/uninstall.py",
+    "jalali_shamsi_datepicker/jalali.py",
+    "jalali_shamsi_datepicker/naming.py",
     "jalali_shamsi_datepicker/patches.txt",
     "jalali_shamsi_datepicker/patches/remove_date_storage_format.py",
     "jalali_shamsi_datepicker/fixtures/custom_field.json",

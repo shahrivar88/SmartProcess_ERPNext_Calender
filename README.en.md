@@ -26,6 +26,7 @@ Iranian users need Jalali dates in Desk. ERPNext and Frappe store and compute Gr
 - Raw stored Gregorian text under the field, with no extra form height
 - `Time` uses this app picker only; the value stays `HH:mm:ss`
 - One switch in **System Settings**
+- Naming series tokens `JYYYY`, `JYY`, `JMM` and `JDD` through the official Frappe hook; existing document names stay unchanged. Guide: [docs/NAMING_SERIES.md](docs/NAMING_SERIES.md)
 
 ## Unsupported
 
@@ -198,6 +199,7 @@ Open bugs and proposals in [Issues](https://github.com/shahrivar88/SmartProcess_
 ```bash
 npm ci
 npm run test:unit
+npm run test:python
 npx playwright install chromium
 npm run test:browser
 npm test

@@ -21,8 +21,9 @@ Load this skill before changing runtime JS, Python, fixtures or vendors in this 
 
 ## Single engine
 
-- `jalali_core.js` is the only mapping implementation.
-- Do not add a second converter and do not fall back to vendor leap tables after a failed integer conversion.
+- `jalali_core.js` is the mapping implementation.
+- `jalali.py` is a server-side integer port of that file for `naming_series_variables`. Keep the two equal with automated comparison tests.
+- Do not add a third converter and do not fall back to vendor leap tables after a failed integer conversion.
 
 ## Isolated picker
 

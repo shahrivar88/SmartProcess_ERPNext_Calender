@@ -9,9 +9,11 @@ Read this file before you edit runtime code, hooks, fixtures, vendors or release
 | Path | Role |
 |---|---|
 | `jalali_shamsi_datepicker/` | Frappe app package |
-| `jalali_shamsi_datepicker/hooks.py` | App metadata, fixtures, boot, uninstall, Desk assets |
+| `jalali_shamsi_datepicker/hooks.py` | App metadata, fixtures, boot, uninstall, Desk assets, naming tokens |
 | `jalali_shamsi_datepicker/boot.py` | Calendar boolean on `bootinfo` |
 | `jalali_shamsi_datepicker/uninstall.py` | Deletes only this app's two Custom Fields |
+| `jalali_shamsi_datepicker/jalali.py` | Server port of `jalali_core.js` |
+| `jalali_shamsi_datepicker/naming.py` | `naming_series_variables` callbacks |
 | `jalali_shamsi_datepicker/public/js/jalali_core.js` | Single mapping engine |
 | `jalali_shamsi_datepicker/public/js/jalali_persian_date_adapter.js` | Isolated picker constructor |
 | `jalali_shamsi_datepicker/public/js/jalali_controls.js` | Frappe Date/Datetime/Time wrap |
@@ -30,6 +32,7 @@ npm run test:browser
 npm test
 npm run test:docs
 npm run test:pack
+npm run test:python
 ```
 
 Playwright uses `Asia/Tehran`, `UTC` and `America/New_York`. Set `PLAYWRIGHT_CHANNEL=msedge` only when you want a system Edge browser.
@@ -41,7 +44,7 @@ Bench commands run on the site host or inside the Docker `backend` container. Al
 - Stored `Date` / `Datetime` values are Gregorian.
 - Jalali is display and input only.
 - Supported Jalali years are 1200 to 1599. Gregorian bounds are 1821-03-21 to 2221-03-20.
-- `jalali_core.js` is the only mapping engine.
+- `jalali_core.js` is the mapping engine. `jalali.py` is a verified integer port for server naming only.
 - The picker uses an isolated constructor. Do not patch `persianDate.prototype` globally.
 - Do not edit Frappe or ERPNext core.
 - Do not add Python monkey patches, `override_whitelisted_methods`, `ignore_permissions` or business-data SQL.

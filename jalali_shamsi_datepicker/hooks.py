@@ -22,6 +22,14 @@ fixtures = [
 extend_bootinfo = ["jalali_shamsi_datepicker.boot.extend_bootinfo"]
 before_uninstall = "jalali_shamsi_datepicker.uninstall.before_uninstall"
 
+# Official Frappe hook. Tokens are independent; unused series stay Gregorian.
+naming_series_variables = {
+    "JYYYY": "jalali_shamsi_datepicker.naming.naming_jyyyy",
+    "JYY": "jalali_shamsi_datepicker.naming.naming_jyy",
+    "JMM": "jalali_shamsi_datepicker.naming.naming_jmm",
+    "JDD": "jalali_shamsi_datepicker.naming.naming_jdd",
+}
+
 app_include_css = [
     "/assets/jalali_shamsi_datepicker/css/persian-datepicker.min.css",
     "/assets/jalali_shamsi_datepicker/css/custom.css?v=17",

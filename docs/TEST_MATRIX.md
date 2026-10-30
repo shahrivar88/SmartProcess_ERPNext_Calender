@@ -9,6 +9,7 @@
 | `npm test` | Unit tests, then Playwright |
 | `npm run test:docs` | Relative links and required names |
 | `npm run test:pack` | setuptools sdist contents |
+| `npm run test:python` | `jalali.py` mapping and naming-token unit tests |
 
 ## Node files
 
@@ -22,6 +23,7 @@
 | `jalali_week_dst.test.js` | Civil-day weeks in DST |
 | `uninstall.test.js` | Custom Field deletion scope |
 | `metadata.test.js` | Version, hooks, fixtures, docs, license |
+| `jalali_naming.test.js` | Python converter equals `jalali_core.js`; naming hook tokens |
 
 ## Playwright files
 

@@ -25,6 +25,8 @@ Version-sensitive DOM notes live in the header of `jalali_controls.js`.
 
 ## Server surface
 
-Python code is boot, uninstall and one idempotent patch that deletes the deprecated storage-format field. There are no DocTypes, no whitelisted methods and no `doc_events`.
+Python code is boot, uninstall, one idempotent patch that deletes the deprecated storage-format field, a port of `jalali_core.js` in `jalali.py`, and `naming_series_variables` callbacks in `naming.py`. There are no DocTypes, no whitelisted methods and no `doc_events`.
+
+The Python port exists only so Frappe can resolve Jalali naming tokens on the server. It must stay equal to `jalali_core.js`. Do not add a third calendar algorithm.
 
 See [DATA_INTEGRITY.md](DATA_INTEGRITY.md) and [FRAPPE_COMPATIBILITY.md](FRAPPE_COMPATIBILITY.md).
