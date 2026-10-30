@@ -15,6 +15,10 @@
 
 Upstream started as an ERPNext 15 app. This fork is only verified on Frappe 16.
 
+## Naming series
+
+`naming_series_variables` is read by `frappe.model.naming.has_custom_parser` in Frappe 16.35.0 and 16.53.0. Each token is a function `(doc, e) -> str`. Preview and prefix use the same parser. This app does not override `parse_naming_series`.
+
 ## Version-sensitive calls
 
 `jalali_controls.js` documents these Frappe 16.34 / 16.35 assumptions:

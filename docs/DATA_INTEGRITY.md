@@ -23,3 +23,5 @@ Jalali years 1200 to 1599 map to Gregorian `1821-03-21` through `2221-03-20`. Da
 - Removal of the deprecated `custom_date_storage_format` field if it existed
 
 Date columns on ToDo, Event, Fiscal Year and other documents are not migrated.
+
+Jalali naming tokens do not rename existing documents and do not rewrite `tabSeries` rows. They only affect a DocType after a user adds `JYYYY`, `JYY`, `JMM` or `JDD` to that series.

@@ -6,8 +6,8 @@ A Frappe app for Jalali display and input on `Date` and `Datetime` fields. The s
 
 This repository is a SmartProcess-maintained fork. Upstream project: [nidyasoft/jalali_shamsi_datepicker](https://github.com/nidyasoft/jalali_shamsi_datepicker). The `LICENSE` file still carries Copyright (c) 2025 nidyasoft.
 
-- Current version: `1.6.4`
-- Release notes: [docs/RELEASE_NOTES_1.6.4.md](docs/RELEASE_NOTES_1.6.4.md)
+- Current version: `1.6.5`
+- Release notes: [docs/RELEASE_NOTES_1.6.5.md](docs/RELEASE_NOTES_1.6.5.md)
 - Frappe app name: `jalali_shamsi_datepicker`
 - GitHub repository name: `SmartProcess_ERPNext_Calender`
 
@@ -26,6 +26,7 @@ Iranian users need Jalali dates in Desk. ERPNext and Frappe store and compute Gr
 - Raw stored Gregorian text under the field, with no extra form height
 - `Time` uses this app picker only; the value stays `HH:mm:ss`
 - One switch in **System Settings**
+- Naming series tokens `JYYYY`, `JYY`, `JMM` and `JDD` through the official Frappe hook; existing document names stay unchanged. Guide: [docs/NAMING_SERIES.md](docs/NAMING_SERIES.md)
 
 ## Unsupported
 
@@ -198,6 +199,7 @@ Open bugs and proposals in [Issues](https://github.com/shahrivar88/SmartProcess_
 ```bash
 npm ci
 npm run test:unit
+npm run test:python
 npx playwright install chromium
 npm run test:browser
 npm test

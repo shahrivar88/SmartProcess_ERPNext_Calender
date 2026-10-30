@@ -28,8 +28,8 @@ npm run test:browser
 - Target `main` unless a maintainer asks for another branch.
 - Keep the diff to one problem.
 - Add or update a regression test for a behavior change.
-- Run `npm test`, `npm run test:docs` and `npm run test:pack` when you touch runtime files, docs or packaging.
-- Do not bump `1.6.4` unless a maintainer asked for a release.
+- Run `npm test`, `npm run test:python`, `npm run test:docs` and `npm run test:pack` when you touch runtime files, docs or packaging.
+- Do not bump `1.6.5` unless a maintainer asked for a release.
 
 ## Vendor changes
 

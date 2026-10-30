@@ -2,6 +2,21 @@
 
 This file records published app versions. Historical entries for `1.6.3` and earlier stay as written.
 
+## 1.6.5
+
+This version adds Jalali Naming Series tokens. Stored `Date` and `Datetime` values stay Gregorian. Existing document names are not rewritten. No business-data migration is required.
+
+### Added
+
+- Register `JYYYY`, `JYY`, `JMM` and `JDD` through the official `naming_series_variables` hook.
+- Port `jalali_core.js` to `jalali.py` for server-side naming only.
+
+### Limits
+
+- Tokens use `now_datetime()`, not `posting_date`.
+- Standard `YYYY` / `YY` / `MM` / `DD` stay unchanged.
+- LICENSE copyright remains Copyright (c) 2025 nidyasoft.
+
 ## 1.6.4
 
 This version keeps the Jalali picker above a Frappe 16 Grid row editor. Stored `Date` and `Datetime` values stay Gregorian. No business-data migration is required.

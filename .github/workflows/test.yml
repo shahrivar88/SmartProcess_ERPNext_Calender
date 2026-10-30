@@ -63,6 +63,9 @@ jobs:
       - name: Check documentation links and names
         run: npm run test:docs
 
+      - name: Run Python naming and mapping unit tests
+        run: npm run test:python
+
       - name: Install setuptools
         run: python -m pip install --upgrade "setuptools>=69"
 

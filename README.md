@@ -6,8 +6,8 @@
 
 این مخزن یک fork نگهداری‌شده توسط SmartProcess است. پروژهٔ بالادستی: [nidyasoft/jalali_shamsi_datepicker](https://github.com/nidyasoft/jalali_shamsi_datepicker). دارندهٔ کپی‌رایت در `LICENSE` همان `nidyasoft` سال ۲۰۲۵ است و عوض نشده است.
 
-- نسخه فعلی: `1.6.4`
-- یادداشت انتشار: [docs/RELEASE_NOTES_1.6.4.md](docs/RELEASE_NOTES_1.6.4.md)
+- نسخه فعلی: `1.6.5`
+- یادداشت انتشار: [docs/RELEASE_NOTES_1.6.5.md](docs/RELEASE_NOTES_1.6.5.md)
 - نام اپ Frappe: `jalali_shamsi_datepicker`
 - نام مخزن GitHub: `SmartProcess_ERPNext_Calender`
 
@@ -26,6 +26,7 @@
 - نمایش مقدار خام میلادی ذخیره‌شده زیر فیلد، بدون تغییر ارتفاع فرم
 - فیلد `Time` فقط انتخابگر زمان همین اپ را می‌گیرد؛ مقدار `HH:mm:ss` استاندارد است
 - یک سوییچ در **تنظیمات سیستم** (System Settings)
+- متغیرهای سری نام‌گذاری `JYYYY`، `JYY`، `JMM` و `JDD` از طریق هوک رسمی Frappe؛ اسناد موجود تغییر نام نمی‌گیرند. راهنما: [docs/NAMING_SERIES.md](docs/NAMING_SERIES.md)
 
 ## پشتیبانی‌نشده
 
@@ -198,6 +199,7 @@ MIT. متن مجوز بالادستی حفظ شده است: Copyright (c) 2025 n
 ```bash
 npm ci
 npm run test:unit
+npm run test:python
 npx playwright install chromium
 npm run test:browser
 npm test
