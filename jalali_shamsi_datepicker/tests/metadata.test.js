@@ -1,5 +1,5 @@
 // Static assertions about versioning, packaging, hooks, CSS tokens and the
-// fixture scope, so the 1.6.4 release stays consistent and narrowly scoped.
+// fixture scope, so the 1.6.5 release stays consistent and narrowly scoped.
 // Run: node --test jalali_shamsi_datepicker/tests/metadata.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -9,17 +9,17 @@ const path = require("node:path");
 const ROOT = path.join(__dirname, "..", ".."); // repo root
 const APP = path.join(ROOT, "jalali_shamsi_datepicker"); // bench app package dir
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
-const VERSION = "1.6.4";
+const VERSION = "1.6.5";
 
 test("package version is a dotted numeric triple", () => {
 	assert.match(VERSION, /^\d+\.\d+\.\d+$/);
 });
 
-test("version is 1.6.4 in the package, the repo root, pyproject and npm metadata", () => {
-	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['"]1\.6\.4['"]/);
-	assert.match(read("__init__.py"), /__version__\s*=\s*['"]1\.6\.4['"]/);
+test("version is 1.6.5 in the package, the repo root, pyproject and npm metadata", () => {
+	assert.match(read("jalali_shamsi_datepicker/__init__.py"), /__version__\s*=\s*['"]1\.6\.5['"]/);
+	assert.match(read("__init__.py"), /__version__\s*=\s*['"]1\.6\.5['"]/);
 	const pyproject = read("pyproject.toml");
-	assert.match(pyproject, /^version\s*=\s*"1\.6\.4"$/m);
+	assert.match(pyproject, /^version\s*=\s*"1\.6\.5"$/m);
 	assert.match(pyproject, /SmartProcess_ERPNext_Calender/);
 	assert.match(pyproject, /^Homepage = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
 	assert.match(pyproject, /^Repository = "https:\/\/github.com\/shahrivar88\/SmartProcess_ERPNext_Calender"$/m);
@@ -157,6 +157,7 @@ test("open-source handoff files exist and name the fork plus upstream", () => {
 		"docs/RELEASE_PROCESS.md",
 		"docs/RELEASE_NOTES_1.6.3.md",
 		"docs/RELEASE_NOTES_1.6.4.md",
+		"docs/RELEASE_NOTES_1.6.5.md",
 		"docs/NAMING_SERIES.md",
 		"docs/PRODUCTION_DEPLOYMENT.md",
 		"docs/ROLLBACK.md",

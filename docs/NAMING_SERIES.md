@@ -19,7 +19,7 @@ Example series: `SINV-.JYYYY.-.#####` → `SINV-1405-00001`.
 
 Standard tokens stay Frappe tokens: `YYYY`, `YY`, `MM`, `DD`, `#####`.
 
-The current civil date comes from `frappe.utils.now_datetime()`, the same clock Frappe uses for `YYYY` / `MM` / `DD`. Digits are ASCII. Dates outside Jalali years 1200–1599 raise an error. They do not fall back to a Gregorian year.
+The current civil date comes from `frappe.utils.now_datetime()`, the same clock Frappe uses for `YYYY` / `MM` / `DD`. These tokens do not read `posting_date`. If ERPNext `Global Defaults.use_posting_datetime_for_naming_documents` is on, ERPNext `YYYY` may follow the document date; `JYYYY` still uses `now_datetime()`. Digits are ASCII. Dates outside Jalali years 1200–1599 raise an error. They do not fall back to a Gregorian year.
 
 ### Where to configure
 
