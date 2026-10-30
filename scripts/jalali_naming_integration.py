@@ -28,7 +28,7 @@ def _freeze(now: datetime):
 
 
 def _series_rows():
-	return frappe.db.sql("select name, current from `tabSeries` order by name", as_dict=True)
+	return frappe.get_all("Series", fields=["name", "current"], order_by="name")
 
 
 def main() -> int:

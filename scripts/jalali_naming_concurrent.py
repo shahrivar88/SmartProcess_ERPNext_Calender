@@ -55,7 +55,11 @@ def mint(bucket, errors):
 
 def main() -> int:
 	init_site()
-	before = frappe.db.sql("select name, current from `tabSeries` where name like 'JALC2-%'", as_dict=True)
+	before = frappe.get_all(
+		"Series",
+		fields=["name", "current"],
+		filters={"name": ("like", "JALC2-%")},
+	)
 	yyyy_now, jalali_now = None, None
 	patches = freeze()
 	for p in patches:
@@ -80,7 +84,11 @@ def main() -> int:
 		thread.join()
 
 	init_site()
-	after = frappe.db.sql("select name, current from `tabSeries` where name like 'JALC2-%'", as_dict=True)
+	after = frappe.get_all(
+		"Series",
+		fields=["name", "current"],
+		filters={"name": ("like", "JALC2-%")},
+	)
 	frappe.destroy()
 	print(
 		json.dumps(
